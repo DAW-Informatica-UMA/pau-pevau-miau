@@ -1,0 +1,20 @@
+SEDE
+Nº 01 Facultad de Medicina
+Nº 02 Complejo de EE.Sociales y Comercio
+Nº 03 Escuela de Ingenierías Industriales
+Nº 04 Facultad de Derecho
+Nº 05 Aulario Gerald Brenan
+Nº 06 E.T.S.Ing. de Telecomunicación/ E.T.S. Ing. Informática
+Nº 07 Fac. CC. de la Educación
+Nº 08 Fac. de Filosofía y Letras
+Nº 09 Aulario Severo Ochoa
+Nº 10 I.E.S. Reyes Católicos (Vélez-Málaga)
+Nº 11 I.E.S. Arroyo de la Miel
+Nº 12 I.E.S. Pintor José María Fernández (Antequera)
+Nº 13 I.E.S. Fuengirola
+Nº 14 I.E.S. Río Verde (Marbella)
+Nº 15 I.E.S. Monterroso (Estepona)
+Nº 16 I.E.S. Dr. Rodríguez Delgado (Ronda)
+Nº 17 I.E.S. Valle del Azahar (Cártama)
+Nº 18 Facultad CC.de la Comunicación y Facultad de Turismo
+Nº 19 I.E.S.María Zambrano (Torre del Mar)
