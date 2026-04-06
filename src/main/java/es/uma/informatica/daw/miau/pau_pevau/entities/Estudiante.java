@@ -20,4 +20,11 @@ public class Estudiante {
     private String telefono;
     private String email;
     private boolean noEliminar = false;
+	
+	@ManyToMany
+	@JoinTable(
+		name = "estudiante_materia", 
+		joinColumns = @JoinColumn(name = "estudiante_id"), 
+		inverseJoinColumns = @JoinColumn(name = "materia_id"))
+	private List<Materia> materiasMatriculadas;
 }
