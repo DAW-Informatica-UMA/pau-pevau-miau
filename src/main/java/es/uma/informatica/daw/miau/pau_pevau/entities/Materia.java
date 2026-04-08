@@ -12,8 +12,7 @@ public class Materia {
     private Long id;
     private String nombre;
 
-    private boolean eliminada; // Requerido por el OpenAPI
-    // Relación: Una materia puede estar en muchos estudiantes
+    private boolean eliminada;
     @ManyToMany(mappedBy = "materiasMatriculadas")
     private List<Estudiante> estudiantes;
 }
