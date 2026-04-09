@@ -19,12 +19,15 @@ public class Estudiante {
 
     private String telefono;
     private String email;
-    private boolean noEliminar = false;
 	
-	@ManyToMany
-	@JoinTable(
-		name = "estudiante_materia", 
-		joinColumns = @JoinColumn(name = "estudiante_id"), 
-		inverseJoinColumns = @JoinColumn(name = "materia_id"))
-	private List<Materia> materiasMatriculadas;
+	private boolean necesidadEspecial;
+    private String codigoIdentificacionExamen;
+
+    @ManyToOne private Instituto instituto;
+    @ManyToOne private Sede sede;
+
+    private boolean noEliminar = false;
+
+    @ManyToMany(mappedBy = "estudiantes")
+    private List<Materia> materiasMatriculadas = new ArrayList<>();
 }
