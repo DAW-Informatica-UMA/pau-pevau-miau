@@ -1,16 +1,15 @@
-package es.uma.informatica.daw.miau.pau_pevau.entities;
+package es.uma.informatica.daw.miau.pau_pevau.models;
 
-import jakarta.persistence.Entity;
+import es.uma.informatica.daw.miau.pau_pevau.entities.Estudiante;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import java.util.List;
 
-@Entity
 @Setter
 @Getter
-@EqualsAndHashCode
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @NoArgsConstructor
 public class ImportacionEstudiantes {
     private List<Estudiante> importados;
