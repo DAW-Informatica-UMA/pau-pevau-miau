@@ -6,13 +6,14 @@ import lombok.*;
 import java.util.List;
 
 @Entity
-@Setter
 @Getter
+@Setter
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @NoArgsConstructor
 public class Sede {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
+    @EqualsAndHashCode.Include
     private Long id;
     private String nombre;
     private String direccion;

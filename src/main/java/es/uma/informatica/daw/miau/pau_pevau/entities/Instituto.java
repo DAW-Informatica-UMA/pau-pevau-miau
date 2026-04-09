@@ -13,6 +13,7 @@ import lombok.*;
 public class Instituto {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
+    @EqualsAndHashCode.Include
     private Long id;
     private String nombre;
     private String direccion1;

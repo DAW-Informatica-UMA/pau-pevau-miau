@@ -15,6 +15,7 @@ import java.util.List;
 public class Materia {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
+    @EqualsAndHashCode.Include
     private Long id;
     private String nombre;
     private boolean eliminada;
