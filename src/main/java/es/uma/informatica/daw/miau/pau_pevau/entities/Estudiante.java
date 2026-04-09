@@ -6,7 +6,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "estudiante")
+@Table(
+    name = "estudiante",
+    uniqueConstraints = {
+        @UniqueConstraint(name = "uk_estudiante_dni_convocatoria", columnNames = {"dni", "convocatoria_id"}),
+        @UniqueConstraint(name = "uk_estudiante_pegatina_convocatoria", columnNames = {"codigo_pegatina", "convocatoria_id"})
+    }
+)
 @Data
 @NoArgsConstructor
 @EqualsAndHashCode(of = "id")
@@ -24,15 +30,17 @@ public class Estudiante {
 
     private String apellido2;
 
-    @Column(unique = true, nullable = false)
+    @Column(nullable = false)
     private String dni;
 
     private String telefono;
 
     private String email;
+
+    @Column(name = "necesidad_especial", nullable = false)
     private boolean necesidadEspecial;
 
-    @Column(unique = true, nullable = false)
+    @Column(name = "codigo_pegatina", nullable = false)
     private String codigoPegatina;
 
     @ElementCollection
@@ -49,5 +57,7 @@ public class Estudiante {
     @ManyToOne
     @JoinColumn(name = "convocatoria_id", nullable = false)
     private Convocatoria convocatoria;
+
+    @Column(name = "no_eliminar", nullable = false)
     private boolean noEliminar;
 }
