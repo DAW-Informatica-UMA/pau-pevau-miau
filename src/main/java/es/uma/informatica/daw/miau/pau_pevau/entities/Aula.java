@@ -10,7 +10,7 @@ import lombok.*;
 @NoArgsConstructor
 public class Aula {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @EqualsAndHashCode.Include
     private Long id;
     private Integer aforo;

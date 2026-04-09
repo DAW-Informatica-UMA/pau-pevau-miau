@@ -12,7 +12,7 @@ import lombok.*;
 @NoArgsConstructor
 public class Instituto {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @EqualsAndHashCode.Include
     private Long id;
     private String nombre;
