@@ -8,7 +8,7 @@ import java.util.List;
 @Entity
 @Setter
 @Getter
-@EqualsAndHashCode
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @NoArgsConstructor
 public class Sede {
     @Id

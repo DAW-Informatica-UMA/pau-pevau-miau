@@ -9,7 +9,7 @@ import lombok.Setter;
 @Embeddable
 @Getter
 @Setter
-@EqualsAndHashCode
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @NoArgsConstructor
 public class NombreCompleto {
     private String apellido1;
