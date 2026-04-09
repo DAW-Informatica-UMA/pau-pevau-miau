@@ -1,12 +1,11 @@
 package es.uma.informatica.daw.miau.pau_pevau.models;
 
-import es.uma.informatica.daw.miau.pau_pevau.entities.Estudiante;
 import lombok.*;
 import java.util.List;
 
 @Data
 @NoArgsConstructor
 public class ImportacionEstudiantes {
-    private List<Estudiante> importados;
+    private List<EstudianteDto> importados;
     private List<ProblemaImportacion> noImportados;
 }
