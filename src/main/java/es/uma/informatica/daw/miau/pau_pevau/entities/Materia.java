@@ -5,15 +5,12 @@ import lombok.*;
 import java.util.List;
 
 @Entity
-@EqualsAndHashCode(onlyExplicitlyIncluded = true)
-@Getter
+@EqualsAndHashCode(of = "id")
+@Data
 @NoArgsConstructor
-@Setter
-@ToString
 public class Materia {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @EqualsAndHashCode.Include
     private Long id;
     private String nombre;
     private boolean eliminada;

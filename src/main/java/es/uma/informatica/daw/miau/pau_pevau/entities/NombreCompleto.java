@@ -4,11 +4,8 @@ import jakarta.persistence.Embeddable;
 import lombok.*;
 
 @Embeddable
-@EqualsAndHashCode(onlyExplicitlyIncluded = true)
-@Getter
+@Data
 @NoArgsConstructor
-@Setter
-@ToString
 public class NombreCompleto {
     private String apellido1;
     private String apellido2;

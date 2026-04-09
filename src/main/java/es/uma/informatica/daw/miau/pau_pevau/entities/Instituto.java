@@ -4,15 +4,12 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@EqualsAndHashCode(onlyExplicitlyIncluded = true)
-@Getter
+@EqualsAndHashCode(of = "id")
+@Data
 @NoArgsConstructor
-@Setter
-@ToString
 public class Instituto {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @EqualsAndHashCode.Include
     private Long id;
     private String nombre;
     private String direccion1;

@@ -4,11 +4,8 @@ import es.uma.informatica.daw.miau.pau_pevau.entities.Estudiante;
 import lombok.*;
 import java.util.List;
 
-@EqualsAndHashCode
-@Getter
+@Data
 @NoArgsConstructor
-@Setter
-@ToString
 public class ImportacionEstudiantes {
     private List<Estudiante> importados;
     private List<ProblemaImportacion> noImportados;
