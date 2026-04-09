@@ -2,14 +2,14 @@ package es.uma.informatica.daw.miau.pau_pevau.entities;
 
 import jakarta.persistence.*;
 import lombok.*;
-
 import java.util.List;
 
 @Entity
-@Getter
-@Setter
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@Getter
 @NoArgsConstructor
+@Setter
+@ToString
 public class Estudiante {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -21,6 +21,7 @@ public class Estudiante {
     private String dni;
     private String telefono;
     private String email;
+    @ToString.Exclude
     @ManyToMany
     @JoinTable(
             name = "estudiante_materia",

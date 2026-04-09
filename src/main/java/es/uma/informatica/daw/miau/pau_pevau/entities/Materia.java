@@ -1,17 +1,15 @@
 package es.uma.informatica.daw.miau.pau_pevau.entities;
 
 import jakarta.persistence.*;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import java.util.List;
 
 @Entity
-@Getter
-@Setter
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@Getter
 @NoArgsConstructor
+@Setter
+@ToString
 public class Materia {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -19,6 +17,7 @@ public class Materia {
     private Long id;
     private String nombre;
     private boolean eliminada;
+    @ToString.Exclude
     @ManyToMany(mappedBy = "materiasMatriculadas")
     private List<Estudiante> estudiantes;
 }

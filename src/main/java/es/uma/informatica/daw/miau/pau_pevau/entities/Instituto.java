@@ -1,15 +1,14 @@
 package es.uma.informatica.daw.miau.pau_pevau.entities;
 
 import jakarta.persistence.*;
-import java.util.List;
-
 import lombok.*;
 
 @Entity
-@Getter
-@Setter
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@Getter
 @NoArgsConstructor
+@Setter
+@ToString
 public class Instituto {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

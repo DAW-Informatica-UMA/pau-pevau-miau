@@ -4,10 +4,11 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Getter
-@Setter
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@Getter
 @NoArgsConstructor
+@Setter
+@ToString
 public class Aula {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
