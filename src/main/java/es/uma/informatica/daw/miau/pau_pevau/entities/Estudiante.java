@@ -1,11 +1,15 @@
 package es.uma.informatica.daw.miau.pau_pevau.entities;
 
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.*;
+
 import java.util.List;
 
 @Entity
-@Data
+@Getter
+@Setter
+@EqualsAndHashCode
+@NoArgsConstructor
 public class Estudiante {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -16,18 +20,18 @@ public class Estudiante {
 
     @Column(unique = true, nullable = false)
     private String dni;
-
     private String telefono;
     private String email;
-	
-	private boolean necesidadEspecial;
-    private String codigoIdentificacionExamen;
 
-    @ManyToOne private Instituto instituto;
-    @ManyToOne private Sede sede;
-
-    private boolean noEliminar = false;
-
-    @ManyToMany(mappedBy = "estudiantes")
+    @ManyToMany
+    @JoinTable(
+            name = "estudiante_materia",
+            joinColumns = @JoinColumn(name = "estudiante_id"),
+            inverseJoinColumns = @JoinColumn(name = "materia_id")
+    )
     private List<Materia> materiasMatriculadas;
+
+    @ManyToOne private Sede idsede;
+    @ManyToOne private Instituto instituto;
+    private boolean noEliminar;
 }

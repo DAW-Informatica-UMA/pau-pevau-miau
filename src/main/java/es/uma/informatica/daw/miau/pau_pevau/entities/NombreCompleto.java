@@ -1,16 +1,18 @@
 package es.uma.informatica.daw.miau.pau_pevau.entities;
 
 import jakarta.persistence.Embeddable;
-import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
+import lombok.Setter;
 
 @Embeddable
-@Data
+@Getter
+@Setter
+@EqualsAndHashCode
 @NoArgsConstructor
-@AllArgsConstructor
 public class NombreCompleto {
-    private String nombre;
     private String apellido1;
     private String apellido2;
+    private String nombre;
 }
