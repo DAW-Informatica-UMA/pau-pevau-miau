@@ -29,5 +29,5 @@ public class Estudiante {
     private boolean noEliminar = false;
 
     @ManyToMany(mappedBy = "estudiantes")
-    private List<Materia> materiasMatriculadas = new ArrayList<>();
+    private List<Materia> materiasMatriculadas;
 }

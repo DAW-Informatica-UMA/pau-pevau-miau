@@ -1,3 +1,5 @@
+package es.uma.informatica.daw.miau.pau_pevau.entities;
+
 import jakarta.persistence.Embeddable;
 import lombok.Data;
 import lombok.NoArgsConstructor;
