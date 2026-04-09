@@ -4,14 +4,14 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@EqualsAndHashCode(of = "id")
 @Data
 @NoArgsConstructor
-public class Aula {
+@EqualsAndHashCode(of = "id")
+public class Convocatoria {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private Integer aforo;
-    private String disponibilidad;
-    @ManyToOne private Sede sede;
+
+    @Column(nullable = false, unique = true)
+    private String cursoAcademico;
 }

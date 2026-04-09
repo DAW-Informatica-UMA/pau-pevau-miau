@@ -2,6 +2,7 @@ package es.uma.informatica.daw.miau.pau_pevau.entities;
 
 import jakarta.persistence.*;
 import lombok.*;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -12,21 +13,26 @@ public class Estudiante {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @Embedded
-    private NombreCompleto nombreCompleto;
+    private String nombre;
+    private String apellido1;
+    private String apellido2;
     @Column(unique = true, nullable = false)
     private String dni;
     private String telefono;
     private String email;
-    @ToString.Exclude
-    @ManyToMany
-    @JoinTable(
-            name = "estudiante_materia",
-            joinColumns = @JoinColumn(name = "estudiante_id"),
-            inverseJoinColumns = @JoinColumn(name = "materia_id")
-    )
-    private List<Materia> materiasMatriculadas;
-    @ManyToOne private Sede idsede;
-    @ManyToOne private Instituto instituto;
+    private boolean necesidadEspecial;
+    @Column(unique = true, nullable = false)
+    private String codigoPegatina;
+    @ElementCollection
+    @CollectionTable(name = "estudiante_materia", joinColumns = @JoinColumn(name = "estudiante_id"))
+    @Column(name = "materia_id", nullable = false)
+    private List<Long> materiasMatriculadas = new ArrayList<>();
+    @Column(name = "instituto_id", nullable = false)
+    private Long idInstituto;
+    @Column(name = "sede_id")
+    private Long idSede;
+    @ManyToOne
+    @JoinColumn(name = "convocatoria_id", nullable = false)
+    private Convocatoria convocatoria;
     private boolean noEliminar;
 }

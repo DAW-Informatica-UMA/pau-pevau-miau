@@ -7,7 +7,15 @@ import java.util.List;
 
 public interface EstudianteRepository extends JpaRepository<Estudiante, Long> {
 
-    List<Estudiante> findByIdsedeId(Long idSede);
+    List<Estudiante> findByIdSede(Long idSede);
 
-    List<Estudiante> findByIdsedeId(Long idSede, Sort sort);
+    List<Estudiante> findByIdSede(Long idSede, Sort sort);
+
+    List<Estudiante> findByConvocatoriaId(Long idConvocatoria);
+
+    List<Estudiante> findByConvocatoriaId(Long idConvocatoria, Sort sort);
+
+    List<Estudiante> findByIdSedeAndConvocatoriaId(Long idSede, Long idConvocatoria);
+
+    List<Estudiante> findByIdSedeAndConvocatoriaId(Long idSede, Long idConvocatoria, Sort sort);
 }
