@@ -7,7 +7,7 @@ import java.util.List;
 
 public interface EstudianteRepository extends JpaRepository<Estudiante, Long> {
 
-    List<Estudiante> findBySedeId(Long idSede);
+    List<Estudiante> findByIdsedeId(Long idSede);
 
-    List<Estudiante> findBySedeId(Long idSede, Sort sort);
+    List<Estudiante> findByIdsedeId(Long idSede, Sort sort);
 }
