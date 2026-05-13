@@ -5,6 +5,6 @@ import lombok.*;
 @Data
 @NoArgsConstructor
 public class ProblemaImportacion {
-    private EstudianteDto estudiante;
+    private EstudianteNuevoDto estudiante;
     private String problemaImportacion;
 }
