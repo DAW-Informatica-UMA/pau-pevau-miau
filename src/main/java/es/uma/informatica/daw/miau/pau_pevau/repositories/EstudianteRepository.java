@@ -9,11 +9,11 @@ import java.util.Optional;
 
 public interface EstudianteRepository extends JpaRepository<Estudiante, Long> {
 
-    Optional<Estudiante> findByDniAndConvocatoriaId(String dni, Long idConvocatoria);
+    Optional<Estudiante> findByDniAndIdConvocatoria(String dni, Long idConvocatoria);
 
-    boolean existsByDniAndConvocatoriaId(String dni, Long idConvocatoria);
+    boolean existsByDniAndIdConvocatoria(String dni, Long idConvocatoria);
 
-    boolean existsByDniAndConvocatoriaIdAndIdNot(String dni, Long idConvocatoria, Long id);
+    boolean existsByDniAndIdConvocatoriaAndIdNot(String dni, Long idConvocatoria, Long id);
 
     boolean existsByIdAndNoEliminarTrue(Long id);
 
@@ -21,13 +21,13 @@ public interface EstudianteRepository extends JpaRepository<Estudiante, Long> {
 
     List<Estudiante> findByIdSede(Long idSede, Sort sort);
 
-    List<Estudiante> findByConvocatoriaId(Long idConvocatoria);
+    List<Estudiante> findByIdConvocatoria(Long idConvocatoria);
 
-    List<Estudiante> findByConvocatoriaId(Long idConvocatoria, Sort sort);
+    List<Estudiante> findByIdConvocatoria(Long idConvocatoria, Sort sort);
 
-    List<Estudiante> findByConvocatoriaIdAndNoEliminarFalse(Long idConvocatoria);
+    List<Estudiante> findByIdConvocatoriaAndNoEliminarFalse(Long idConvocatoria);
 
-    List<Estudiante> findByIdSedeAndConvocatoriaId(Long idSede, Long idConvocatoria);
+    List<Estudiante> findByIdSedeAndIdConvocatoria(Long idSede, Long idConvocatoria);
 
-    List<Estudiante> findByIdSedeAndConvocatoriaId(Long idSede, Long idConvocatoria, Sort sort);
+    List<Estudiante> findByIdSedeAndIdConvocatoria(Long idSede, Long idConvocatoria, Sort sort);
 }

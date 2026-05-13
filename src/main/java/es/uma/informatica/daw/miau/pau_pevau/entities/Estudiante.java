@@ -15,7 +15,7 @@ import java.util.List;
 )
 @Data
 @NoArgsConstructor
-@EqualsAndHashCode(of = "id")
+@EqualsAndHashCode(of = {"dni", "idConvocatoria"})
 public class Estudiante {
 
     @Id
@@ -54,9 +54,8 @@ public class Estudiante {
     @Column(name = "sede_id")
     private Long idSede;
 
-    @ManyToOne
-    @JoinColumn(name = "convocatoria_id", nullable = false)
-    private Convocatoria convocatoria;
+    @Column(name = "convocatoria_id", nullable = false)
+    private Long idConvocatoria;
 
     @Column(name = "no_eliminar", nullable = false)
     private boolean noEliminar;
