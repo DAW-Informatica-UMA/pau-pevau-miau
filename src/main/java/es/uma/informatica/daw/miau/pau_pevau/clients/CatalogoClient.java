@@ -28,7 +28,7 @@ public class CatalogoClient {
         try {
             return restTemplate.getForObject(baseUrl + "/institutos/" + id, InstitutoDto.class);
         } catch (HttpClientErrorException.NotFound e) {
-            return null;
+            return null; 
         } catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Error de conexión con el catálogo al buscar instituto por ID", e);
         }
@@ -57,6 +57,21 @@ public class CatalogoClient {
             return null;
         } catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Error de conexión con el catálogo al buscar materia por ID", e);
+        }
+    }
+
+    public MateriaDto buscarMateriaPorNombre(String nombre) {
+        if (nombre == null || nombre.trim().isEmpty()) return null;
+        try {
+            MateriaDto[] materias = restTemplate.getForObject(baseUrl + "/materias?nombre=" + nombre, MateriaDto[].class);
+            if (materias != null && materias.length > 0) {
+                return materias[0];
+            }
+            return null;
+        } catch (HttpClientErrorException.NotFound e) {
+            return null;
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Error de conexión con el catálogo al buscar materia por nombre", e);
         }
     }
 }

@@ -28,14 +28,12 @@ public class EstudianteService {
     private final EstudianteMapper mapper;
     private final CatalogoClient catalogoClient;
 
-    // Constante para no dejar números mágicos sueltos
     private static final Long CONVOCATORIA_VIGENTE = 1L;
 
     public EstudianteDto consultarEstudiante(Long idEstudiante) {
-        Estudiante estudiante = estudianteRepo.findById(idEstudiante)
+        Estudiante actual = estudianteRepo.findById(idEstudiante)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Estudiante no encontrado"));
-        
-        return rellenarDatosExternos(estudiante);
+        return rellenarDatosExternos(actual);
     }
 
     public List<EstudianteDto> consultarEstudiantes(Long idSede, Long idConvocatoria) {
@@ -58,8 +56,9 @@ public class EstudianteService {
     }
 
     public EstudianteDto crearEstudiante(EstudianteNuevoDto estudianteNuevo) {
+        validarRelaciones(estudianteNuevo);
         if (estudianteRepo.existsByDniAndIdConvocatoria(estudianteNuevo.getDni(), CONVOCATORIA_VIGENTE)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "El DNI ya existe");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "El DNI ya existe en esta convocatoria");
         }
 
         Estudiante entidad = mapper.aEntidad(estudianteNuevo, CONVOCATORIA_VIGENTE);
@@ -71,6 +70,8 @@ public class EstudianteService {
     public EstudianteDto actualizarEstudiante(Long idEstudiante, EstudianteNuevoDto modificado) {
         Estudiante actual = estudianteRepo.findById(idEstudiante)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Estudiante no encontrado"));
+                
+        validarRelaciones(modificado);
 
         if (!actual.getDni().equals(modificado.getDni())) {
             if (estudianteRepo.existsByDniAndIdConvocatoria(modificado.getDni(), CONVOCATORIA_VIGENTE)) {
@@ -86,6 +87,7 @@ public class EstudianteService {
         Estudiante entidadModificada = mapper.aEntidad(modificado, CONVOCATORIA_VIGENTE);
         entidadModificada.setId(actual.getId());
         entidadModificada.setCodigoPegatina(actual.getCodigoPegatina());
+        
         Estudiante guardado = estudianteRepo.save(entidadModificada);
         return rellenarDatosExternos(guardado);
     }
@@ -114,9 +116,8 @@ public class EstudianteService {
             while ((linea = br.readLine()) != null) {
                 String[] columnas = linea.split(";");
                 
-                // Validacion de que las columnas minimas existen.
-                if (columnas.length < 6 || columnas[0].trim().isEmpty() || columnas[1].trim().isEmpty() || 
-                    columnas[2].trim().isEmpty() || columnas[4].trim().isEmpty()) {
+                if (columnas.length < 5 || columnas[0].trim().isEmpty() || columnas[1].trim().isEmpty() || 
+                    columnas[4].trim().isEmpty()) {
                     continue;
                 }
                 
@@ -127,7 +128,9 @@ public class EstudianteService {
                 NombreCompletoDto nb = new NombreCompletoDto();
                 nb.setNombre(columnas[1].trim());
                 nb.setApellido1(columnas[2].trim());
-                nb.setApellido2(columnas[3].trim());
+                if (columnas.length > 3) {
+                    nb.setApellido2(columnas[3].trim());
+                }
                 dtoNuevo.setNombreCompleto(nb);
                 
                 // Buscamos el instituto usando el endpint correcto
@@ -140,7 +143,20 @@ public class EstudianteService {
                     // Si el microservicio no lo encuentra, da fallo para que se registre en la lista de NO importados.
                     throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Instituto no encontrado en el catálogo: " + nombreInstituto);
                 } 
-                dtoNuevo.setMateriasMatriculadas(new HashSet<>());
+                
+                Set<Long> setMaterias = new HashSet<>();
+                if (columnas.length >= 6 && !columnas[5].trim().isEmpty()) {
+                    String[] nombresMaterias = columnas[5].split(",");
+                    for (String nomMateria : nombresMaterias) {
+                        MateriaDto MAT = catalogoClient.buscarMateriaPorNombre(nomMateria.trim());
+                        if (MAT != null) {
+                            setMaterias.add(MAT.getId());
+                        } else {
+                            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Materia no encontrada en el catálogo: " + nomMateria.trim());
+                        }
+                    }
+                }
+                dtoNuevo.setMateriasMatriculadas(setMaterias);
 
                 try {
                     EstudianteDto guardadoClase = crearEstudiante(dtoNuevo);
@@ -174,5 +190,20 @@ public class EstudianteService {
         }
 
         return mapper.aDto(estudiante, insti, materiasList);
+    }
+    
+    private void validarRelaciones(EstudianteNuevoDto dto) {
+        if (dto.getIdInstituto() != null) {
+            if (catalogoClient.getInstituto(dto.getIdInstituto()) == null) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Instituto no encontrado");
+            }
+        }
+        if (dto.getMateriasMatriculadas() != null) {
+            for (Long idMat : dto.getMateriasMatriculadas()) {
+                if (catalogoClient.getMateria(idMat) == null) {
+                    throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Materia no encontrada");
+                }
+            }
+        }
     }
 }
