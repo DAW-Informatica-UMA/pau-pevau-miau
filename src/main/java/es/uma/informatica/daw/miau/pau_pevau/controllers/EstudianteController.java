@@ -55,7 +55,7 @@ public class EstudianteController {
         return ResponseEntity.created(location).body(creado);
     }
 
-    @PostMapping("/upload")
+    @PostMapping(value = "/upload", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ImportacionEstudiantes> importarEstudiantes(
             @RequestParam("ficheroEstudiantes") MultipartFile ficheroEstudiantes) {
         return ResponseEntity.ok(estudianteService.importarEstudiantes(ficheroEstudiantes));

@@ -3,11 +3,16 @@ package es.uma.informatica.daw.miau.pau_pevau.clients;
 import es.uma.informatica.daw.miau.pau_pevau.models.InstitutoDto;
 import es.uma.informatica.daw.miau.pau_pevau.models.MateriaDto;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.util.List;
 
 @Component
 public class CatalogoClient {
@@ -37,9 +42,19 @@ public class CatalogoClient {
     public InstitutoDto buscarInstitutoPorNombre(String nombre) {
         if (nombre == null || nombre.trim().isEmpty()) return null;
         try {
-            InstitutoDto[] institutos = restTemplate.getForObject(baseUrl + "/institutos?nombre=" + nombre, InstitutoDto[].class);
-            if (institutos != null && institutos.length > 0) {
-                return institutos[0];
+            ResponseEntity<List<InstitutoDto>> response = restTemplate.exchange(
+                    baseUrl + "/institutos",
+                    HttpMethod.GET,
+                    null,
+                    new ParameterizedTypeReference<List<InstitutoDto>>() {}
+            );
+            List<InstitutoDto> institutos = response.getBody();
+            if (institutos != null) {
+                for (InstitutoDto instituto : institutos) {
+                    if (nombre.equalsIgnoreCase(instituto.getNombre())) {
+                        return instituto;
+                    }
+                }
             }
             return null;
         } catch (HttpClientErrorException.NotFound e) {
@@ -63,9 +78,19 @@ public class CatalogoClient {
     public MateriaDto buscarMateriaPorNombre(String nombre) {
         if (nombre == null || nombre.trim().isEmpty()) return null;
         try {
-            MateriaDto[] materias = restTemplate.getForObject(baseUrl + "/materias?nombre=" + nombre, MateriaDto[].class);
-            if (materias != null && materias.length > 0) {
-                return materias[0];
+            ResponseEntity<List<MateriaDto>> response = restTemplate.exchange(
+                    baseUrl + "/materias",
+                    HttpMethod.GET,
+                    null,
+                    new ParameterizedTypeReference<List<MateriaDto>>() {}
+            );
+            List<MateriaDto> materias = response.getBody();
+            if (materias != null) {
+                for (MateriaDto materia : materias) {
+                    if (nombre.equalsIgnoreCase(materia.getNombre())) {
+                        return materia;
+                    }
+                }
             }
             return null;
         } catch (HttpClientErrorException.NotFound e) {

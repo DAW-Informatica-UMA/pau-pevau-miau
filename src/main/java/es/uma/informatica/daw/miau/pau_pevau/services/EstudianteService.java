@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import org.springframework.beans.factory.annotation.Value;
 
 @Service
 @RequiredArgsConstructor
@@ -28,14 +29,18 @@ public class EstudianteService {
     private final EstudianteMapper mapper;
     private final CatalogoClient catalogoClient;
 
-    private static final Long CONVOCATORIA_VIGENTE = 1L;
+    // Para no tener que recompilar todo cuando cambie la convocatoria vigente
+    @Value("${pau_pevau.convocatoria.vigente:1}")
+    private Long CONVOCATORIA_VIGENTE;
 
+    @Transactional(readOnly = true)
     public EstudianteDto consultarEstudiante(Long idEstudiante) {
         Estudiante actual = estudianteRepo.findById(idEstudiante)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Estudiante no encontrado"));
         return rellenarDatosExternos(actual);
     }
 
+    @Transactional(readOnly = true)
     public List<EstudianteDto> consultarEstudiantes(Long idSede, Long idConvocatoria) {
         if (idConvocatoria == null) {
             idConvocatoria = CONVOCATORIA_VIGENTE;
@@ -81,6 +86,9 @@ public class EstudianteService {
 
         // Esto es para evitar que un alumno bloqueado se desbloquee por accidente al hacer una modificación.
         if (actual.isNoEliminar()) {
+            if (modificado.getNoEliminar() != null && !modificado.getNoEliminar()) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "El estudiante está marcado como no eliminar, no se puede revocar ese estado.");
+            }
             modificado.setNoEliminar(true);
         }
 
@@ -118,6 +126,12 @@ public class EstudianteService {
                 
                 if (columnas.length < 5 || columnas[0].trim().isEmpty() || columnas[1].trim().isEmpty() || 
                     columnas[4].trim().isEmpty()) {
+                    ProblemaImportacion problemaRegistro = new ProblemaImportacion();
+                    EstudianteNuevoDto estudianteFaltante = new EstudianteNuevoDto();
+                    estudianteFaltante.setDni(columnas.length > 4 ? columnas[4].trim() : "DESCONOCIDO");
+                    problemaRegistro.setEstudiante(estudianteFaltante);
+                    problemaRegistro.setProblemaImportacion("Faltan campos obligatorios");
+                    wrapper.getNoImportados().add(problemaRegistro);
                     continue;
                 }
                 
@@ -133,32 +147,32 @@ public class EstudianteService {
                 }
                 dtoNuevo.setNombreCompleto(nb);
                 
-                // Buscamos el instituto usando el endpint correcto
-                String nombreInstituto = columnas[0].trim();
-                InstitutoDto institutoEncontrado = catalogoClient.buscarInstitutoPorNombre(nombreInstituto);
-                
-                if (institutoEncontrado != null) {
-                    dtoNuevo.setIdInstituto(institutoEncontrado.getId()); 
-                } else {
-                    // Si el microservicio no lo encuentra, da fallo para que se registre en la lista de NO importados.
-                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Instituto no encontrado en el catálogo: " + nombreInstituto);
-                } 
-                
-                Set<Long> setMaterias = new HashSet<>();
-                if (columnas.length >= 6 && !columnas[5].trim().isEmpty()) {
-                    String[] nombresMaterias = columnas[5].split(",");
-                    for (String nomMateria : nombresMaterias) {
-                        MateriaDto MAT = catalogoClient.buscarMateriaPorNombre(nomMateria.trim());
-                        if (MAT != null) {
-                            setMaterias.add(MAT.getId());
-                        } else {
-                            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Materia no encontrada en el catálogo: " + nomMateria.trim());
+                try {
+                    // Buscamos el instituto usando el endpint correcto
+                    String nombreInstituto = columnas[0].trim();
+                    InstitutoDto institutoEncontrado = catalogoClient.buscarInstitutoPorNombre(nombreInstituto);
+                    
+                    if (institutoEncontrado != null) {
+                        dtoNuevo.setIdInstituto(institutoEncontrado.getId()); 
+                    } else {
+                        // Si el microservicio no lo encuentra, da fallo para que se registre en la lista de NO importados.
+                        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Instituto no encontrado en el catálogo: " + nombreInstituto);
+                    } 
+                    
+                    Set<Long> setMaterias = new HashSet<>();
+                    if (columnas.length >= 6 && !columnas[5].trim().isEmpty()) {
+                        String[] nombresMaterias = columnas[5].split(",");
+                        for (String nomMateria : nombresMaterias) {
+                            MateriaDto MAT = catalogoClient.buscarMateriaPorNombre(nomMateria.trim());
+                            if (MAT != null) {
+                                setMaterias.add(MAT.getId());
+                            } else {
+                                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Materia no encontrada en el catálogo: " + nomMateria.trim());
+                            }
                         }
                     }
-                }
-                dtoNuevo.setMateriasMatriculadas(setMaterias);
+                    dtoNuevo.setMateriasMatriculadas(setMaterias);
 
-                try {
                     EstudianteDto guardadoClase = crearEstudiante(dtoNuevo);
                     wrapper.getImportados().add(guardadoClase);
                 } catch (ResponseStatusException e) {
