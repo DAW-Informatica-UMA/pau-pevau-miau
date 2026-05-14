@@ -13,6 +13,8 @@ public interface EstudianteRepository extends JpaRepository<Estudiante, Long> {
 
     boolean existsByDniAndIdConvocatoria(String dni, Long idConvocatoria);
 
+    boolean existsByIdInstituto(Long idInstituto);
+
     boolean existsByDniAndIdConvocatoriaAndIdNot(String dni, Long idConvocatoria, Long id);
 
     boolean existsByIdAndNoEliminarTrue(Long id);
@@ -27,9 +29,9 @@ public interface EstudianteRepository extends JpaRepository<Estudiante, Long> {
 
     List<Estudiante> findByIdConvocatoriaAndNoEliminarFalse(Long idConvocatoria);
 
+
     List<Estudiante> findByIdSedeAndIdConvocatoria(Long idSede, Long idConvocatoria);
 
     List<Estudiante> findByIdSedeAndIdConvocatoria(Long idSede, Long idConvocatoria, Sort sort);
 
-    boolean existsByIdInstituto(Long idInstituto);
 }
