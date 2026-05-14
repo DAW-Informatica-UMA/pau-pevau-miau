@@ -26,6 +26,7 @@ public class EstudianteService {
     private final EstudianteRepository estudianteRepo;
     private final EstudianteMapper mapper;
     private final CatalogoClient catalogoClient;
+    private final CsvEstudianteParser csvParser;
 
     @Value("${pau_pevau.convocatoria.vigente:1}")
     private Long CONVOCATORIA_VIGENTE;
@@ -140,80 +141,54 @@ public class EstudianteService {
         wrapper.setImportados(new ArrayList<>());
         wrapper.setNoImportados(new ArrayList<>());
 
-        // Usamos parallel dado al tamaño grande del CSV.
-        lineasCsv.parallelStream().forEach(linea -> {
-            String[] columnas = linea.split(";");
-            
-            // Validamos que los campos obligatorios estén presentes (DNI, nombre, primer apellido, instituto)
-            if (columnas.length < 5 || columnas[0].trim().isEmpty() || columnas[1].trim().isEmpty() || 
-                columnas[4].trim().isEmpty()) {
-                ProblemaImportacion problemaRegistro = new ProblemaImportacion();
-                EstudianteNuevoDto estudianteFaltante = new EstudianteNuevoDto();
-                estudianteFaltante.setDni(columnas.length > 4 ? columnas[4].trim() : "DESCONOCIDO");
-                problemaRegistro.setEstudiante(estudianteFaltante);
-                problemaRegistro.setProblemaImportacion("Faltan campos obligatorios");
-                
-                synchronized (wrapper.getNoImportados()) {
-                    wrapper.getNoImportados().add(problemaRegistro);
-                }
-                return;
+        List<CsvEstudianteParser.EstudianteParseado> parseados = csvParser.parsearLineas(lineasCsv);
+
+        // Ya no usamos parallelStream para evitar bloqueos y contención de pestillos (synchronized),
+        // delegando transaccionalidad al guardado individual.
+        for (CsvEstudianteParser.EstudianteParseado item : parseados) {
+            if (item.errorParseo != null) {
+                ProblemaImportacion problema = new ProblemaImportacion();
+                problema.setEstudiante(item.dto);
+                problema.setProblemaImportacion(item.errorParseo);
+                wrapper.getNoImportados().add(problema);
+                continue;
             }
-            
-            EstudianteNuevoDto dtoNuevo = new EstudianteNuevoDto();
-            dtoNuevo.setDni(columnas[4].trim());
-            
-            NombreCompletoDto nb = new NombreCompletoDto();
-            nb.setNombre(columnas[1].trim());
-            nb.setApellido1(columnas[2].trim());
-            if (columnas.length > 3) {
-                nb.setApellido2(columnas[3].trim());
-            }
-            dtoNuevo.setNombreCompleto(nb);
-            
-            // Consultas externas desde catalogo para validar instituto y materias, y obtener sus IDs
+
             try {
-                String nombreInstituto = columnas[0].trim();
-                InstitutoDto institutoEncontrado = catalogoClient.buscarInstitutoPorNombre(nombreInstituto);
+                EstudianteNuevoDto dtoNuevo = item.dto;
                 
-                if (institutoEncontrado != null) {
-                    dtoNuevo.setIdInstituto(institutoEncontrado.getId()); 
+                // Mapeo Catálogo
+                InstitutoDto insti = catalogoClient.buscarInstitutoPorNombre(item.nombreInstituto);
+                if (insti != null) {
+                    dtoNuevo.setIdInstituto(insti.getId());
                 } else {
-                    throw new CatalogoException("Instituto no encontrado en el catálogo: " + nombreInstituto);
-                } 
-                
+                    throw new CatalogoException("Instituto no encontrado en el catálogo: " + item.nombreInstituto);
+                }
+
                 Set<Long> setMaterias = new HashSet<>();
-                if (columnas.length >= 6 && !columnas[5].trim().isEmpty()) {
-                    String[] nombresMaterias = columnas[5].split(",");
-                    for (String nomMateria : nombresMaterias) {
-                        MateriaDto MAT = catalogoClient.buscarMateriaPorNombre(nomMateria.trim());
+                if (item.nombresMaterias != null) {
+                    for (String nomMateria : item.nombresMaterias) {
+                        MateriaDto MAT = catalogoClient.buscarMateriaPorNombre(nomMateria);
                         if (MAT != null) {
                             setMaterias.add(MAT.getId());
                         } else {
-                            throw new CatalogoException("Materia no encontrada en el catálogo: " + nomMateria.trim());
+                            throw new CatalogoException("Materia no encontrada en el catálogo: " + nomMateria);
                         }
                     }
                 }
                 dtoNuevo.setMateriasMatriculadas(setMaterias);
 
-                EstudianteDto guardadoClase = null;
-                // Para evitar condiciones de carrera
-                synchronized (this) {
-                    guardadoClase = crearEstudiante(dtoNuevo);
-                }
-                
-                synchronized (wrapper.getImportados()) {
-                    wrapper.getImportados().add(guardadoClase);
-                }
-                
+                // Guardado
+                EstudianteDto guardado = crearEstudiante(dtoNuevo);
+                wrapper.getImportados().add(guardado);
+
             } catch (Exception e) {
                 ProblemaImportacion problema = new ProblemaImportacion();
-                problema.setEstudiante(dtoNuevo);
+                problema.setEstudiante(item.dto);
                 problema.setProblemaImportacion(e.getMessage());
-                synchronized (wrapper.getNoImportados()) {
-                    wrapper.getNoImportados().add(problema);
-                }
+                wrapper.getNoImportados().add(problema);
             }
-        });
+        }
         
         return wrapper;
     }
