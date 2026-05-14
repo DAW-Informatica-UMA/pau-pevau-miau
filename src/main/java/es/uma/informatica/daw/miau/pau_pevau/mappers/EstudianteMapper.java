@@ -12,6 +12,10 @@ import java.util.UUID;
 public class EstudianteMapper {
 
     public Estudiante aEntidad(EstudianteNuevoDto dto, Long idConvocatoria) {
+        return aEntidad(dto, idConvocatoria, null);
+    }
+
+    public Estudiante aEntidad(EstudianteNuevoDto dto, Long idConvocatoria, String codigoPegatina) {
         if (dto == null) {
             return null;
         }
@@ -27,8 +31,11 @@ public class EstudianteMapper {
         entity.setTelefono(dto.getTelefono());
         entity.setEmail(dto.getEmail());
         
-        // Generamos codigo random para la pegatina ya que no se proporciona
-        entity.setCodigoPegatina(UUID.randomUUID().toString().substring(0, 8).toUpperCase());
+        if (codigoPegatina != null) {
+            entity.setCodigoPegatina(codigoPegatina);
+        } else {
+            entity.setCodigoPegatina(UUID.randomUUID().toString().substring(0, 8).toUpperCase());
+        }
         entity.setNecesidadEspecial(false);
         
         if (dto.getMateriasMatriculadas() != null) {

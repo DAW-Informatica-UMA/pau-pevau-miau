@@ -21,8 +21,11 @@ public class CatalogoClient {
     private final RestTemplate restTemplate;
     private final String baseUrl;
 
-    private Map<String, InstitutoDto> institutoByNameCache = new ConcurrentHashMap<>();
-    private Map<String, MateriaDto> materiaByNameCache = new ConcurrentHashMap<>();
+    // Cache en memoria sin expiracion, pensado para datos de catalogo estables.
+    private final Map<String, InstitutoDto> institutoByNameCache = new ConcurrentHashMap<>();
+    private final Map<String, MateriaDto> materiaByNameCache = new ConcurrentHashMap<>();
+    private final Map<Long, InstitutoDto> institutoByIdCache = new ConcurrentHashMap<>();
+    private final Map<Long, MateriaDto> materiaByIdCache = new ConcurrentHashMap<>();
 
     public CatalogoClient(RestTemplate restTemplate, @Value("${catalogo.url:http://localhost:8080}") String baseUrl) {
         this.restTemplate = restTemplate;
@@ -31,8 +34,17 @@ public class CatalogoClient {
 
     public InstitutoDto getInstituto(Long id) {
         if (id == null) return null;
+
+        InstitutoDto cached = institutoByIdCache.get(id);
+        if (cached != null) {
+            return cached;
+        }
         try {
-            return restTemplate.getForObject(baseUrl + "/institutos/" + id, InstitutoDto.class);
+            InstitutoDto dto = restTemplate.getForObject(baseUrl + "/institutos/" + id, InstitutoDto.class);
+            if (dto != null) {
+                institutoByIdCache.put(id, dto);
+            }
+            return dto;
         } catch (HttpClientErrorException.NotFound e) {
             return null; 
         } catch (Exception e) {
@@ -60,6 +72,9 @@ public class CatalogoClient {
             if (institutos != null) {
                 for (InstitutoDto instituto : institutos) {
                     institutoByNameCache.put(instituto.getNombre().toLowerCase().trim(), instituto);
+                    if (instituto.getId() != null) {
+                        institutoByIdCache.putIfAbsent(instituto.getId(), instituto);
+                    }
                     if (nombre.equalsIgnoreCase(instituto.getNombre())) {
                         return instituto;
                     }
@@ -75,8 +90,17 @@ public class CatalogoClient {
 
     public MateriaDto getMateria(Long id) {
         if (id == null) return null;
+
+        MateriaDto cached = materiaByIdCache.get(id);
+        if (cached != null) {
+            return cached;
+        }
         try {
-            return restTemplate.getForObject(baseUrl + "/materias/" + id, MateriaDto.class);
+            MateriaDto dto = restTemplate.getForObject(baseUrl + "/materias/" + id, MateriaDto.class);
+            if (dto != null) {
+                materiaByIdCache.put(id, dto);
+            }
+            return dto;
         } catch (HttpClientErrorException.NotFound e) {
             return null;
         } catch (Exception e) {
@@ -103,6 +127,9 @@ public class CatalogoClient {
             if (materias != null) {
                 for (MateriaDto materia : materias) {
                     materiaByNameCache.put(materia.getNombre().toLowerCase().trim(), materia);
+                    if (materia.getId() != null) {
+                        materiaByIdCache.putIfAbsent(materia.getId(), materia);
+                    }
                     if (nombre.equalsIgnoreCase(materia.getNombre())) {
                         return materia;
                     }

@@ -18,6 +18,16 @@ public class GlobalExceptionHandler {
         return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, e.getMessage());
     }
 
+    @ExceptionHandler(InstitutoNoEncontradoException.class)
+    public ProblemDetail handleInstitutoNoEncontrado(InstitutoNoEncontradoException e) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, e.getMessage());
+    }
+
+    @ExceptionHandler(MateriaNoEncontradaException.class)
+    public ProblemDetail handleMateriaNoEncontrada(MateriaNoEncontradaException e) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, e.getMessage());
+    }
+
     @ExceptionHandler(DniDuplicadoException.class)
     public ProblemDetail handleDniDuplicado(DniDuplicadoException e) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, e.getMessage());
@@ -43,6 +53,6 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(CsvLecturaException.class)
     public ProblemDetail handleCsvLecturaException(CsvLecturaException e) {
-        return ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, e.getMessage());
     }
 }

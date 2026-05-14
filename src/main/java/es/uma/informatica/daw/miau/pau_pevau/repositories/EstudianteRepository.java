@@ -29,7 +29,9 @@ public interface EstudianteRepository extends JpaRepository<Estudiante, Long> {
 
     List<Estudiante> findByIdConvocatoriaAndNoEliminarFalse(Long idConvocatoria);
 
+
     List<Estudiante> findByIdSedeAndIdConvocatoria(Long idSede, Long idConvocatoria);
 
     List<Estudiante> findByIdSedeAndIdConvocatoria(Long idSede, Long idConvocatoria, Sort sort);
+
 }

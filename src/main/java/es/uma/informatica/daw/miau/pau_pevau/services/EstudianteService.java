@@ -2,13 +2,17 @@ package es.uma.informatica.daw.miau.pau_pevau.services;
 
 import es.uma.informatica.daw.miau.pau_pevau.clients.CatalogoClient;
 import es.uma.informatica.daw.miau.pau_pevau.entities.Estudiante;
+import es.uma.informatica.daw.miau.pau_pevau.entities.Instituto;
 import es.uma.informatica.daw.miau.pau_pevau.exceptions.CatalogoException;
 import es.uma.informatica.daw.miau.pau_pevau.exceptions.DniDuplicadoException;
 import es.uma.informatica.daw.miau.pau_pevau.exceptions.EstudianteBloqueadoException;
 import es.uma.informatica.daw.miau.pau_pevau.exceptions.EstudianteNoEncontradoException;
+import es.uma.informatica.daw.miau.pau_pevau.exceptions.InstitutoNoEncontradoException;
+import es.uma.informatica.daw.miau.pau_pevau.exceptions.MateriaNoEncontradaException;
 import es.uma.informatica.daw.miau.pau_pevau.mappers.EstudianteMapper;
 import es.uma.informatica.daw.miau.pau_pevau.models.*;
 import es.uma.informatica.daw.miau.pau_pevau.repositories.EstudianteRepository;
+import es.uma.informatica.daw.miau.pau_pevau.repositories.InstitutoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,25 +30,27 @@ public class EstudianteService {
     private final EstudianteRepository estudianteRepo;
     private final EstudianteMapper mapper;
     private final CatalogoClient catalogoClient;
+    private final InstitutoRepository institutoRepo;
     private final CsvEstudianteParser csvParser;
 
     @Value("${pau_pevau.convocatoria.vigente:1}")
     private Long CONVOCATORIA_VIGENTE;
 
     // Busca un estudiante por ID y devuelve sus datos con información del catálogo
+    @Transactional(readOnly = true)
     public EstudianteDto consultarEstudiante(Long idEstudiante) {
         Estudiante actual = buscarEstudianteBD(idEstudiante);
         return rellenarDatosExternos(actual);
     }
 
     // Método privado que busca un estudiante en BD por ID, lanza excepción si no existe
-    @Transactional(readOnly = true)
     private Estudiante buscarEstudianteBD(Long idEstudiante) {
         return estudianteRepo.findById(idEstudiante)
                 .orElseThrow(() -> new EstudianteNoEncontradoException("Estudiante no encontrado"));
     }
 
     // Devuelve lista de estudiantes filtrados por sede y convocatoria (vigente si no se especifica)
+    @Transactional(readOnly = true)
     public List<EstudianteDto> consultarEstudiantes(Long idSede, Long idConvocatoria) {
         if (idConvocatoria == null) {
             idConvocatoria = CONVOCATORIA_VIGENTE;
@@ -60,7 +66,6 @@ public class EstudianteService {
     }
     
     // Método privado que busca en BD estudiantes por sede y convocatoria
-    @Transactional(readOnly = true)
     private List<Estudiante> buscarEstudiantesBD(Long idSede, Long idConvocatoria) {
         if (idSede != null) {
             return estudianteRepo.findByIdSedeAndIdConvocatoria(idSede, idConvocatoria);
@@ -70,6 +75,7 @@ public class EstudianteService {
     }
 
     // Crea un nuevo estudiante validando relaciones y verifica que el DNI no esté duplicado
+    @Transactional
     public EstudianteDto crearEstudiante(EstudianteNuevoDto estudianteNuevo) {
         validarRelaciones(estudianteNuevo);
         
@@ -79,7 +85,6 @@ public class EstudianteService {
     }
     
     // Método privado que persiste un nuevo estudiante en BD tras validar duplicidad de DNI
-    @Transactional
     private Estudiante guardarEstudianteNuevoBD(EstudianteNuevoDto estudianteNuevo) {
         if (estudianteRepo.existsByDniAndIdConvocatoria(estudianteNuevo.getDni(), CONVOCATORIA_VIGENTE)) {
             throw new DniDuplicadoException("El DNI ya existe en esta convocatoria");
@@ -90,6 +95,7 @@ public class EstudianteService {
     }
 
     // Actualiza datos de un estudiante manteniendo DNI único y respetando bloqueo de no eliminable
+    @Transactional
     public EstudianteDto actualizarEstudiante(Long idEstudiante, EstudianteNuevoDto modificado) {
         validarRelaciones(modificado);
         
@@ -99,7 +105,6 @@ public class EstudianteService {
     }
     
     // Método privado que persiste cambios en un estudiante existente en BD
-    @Transactional
     private Estudiante actualizarEstudianteBD(Long idEstudiante, EstudianteNuevoDto modificado) {
         Estudiante actual = buscarEstudianteBD(idEstudiante);
 
@@ -116,9 +121,8 @@ public class EstudianteService {
             modificado.setNoEliminar(true);
         }
 
-        Estudiante entidadModificada = mapper.aEntidad(modificado, CONVOCATORIA_VIGENTE);
+        Estudiante entidadModificada = mapper.aEntidad(modificado, CONVOCATORIA_VIGENTE, actual.getCodigoPegatina());
         entidadModificada.setId(actual.getId());
-        entidadModificada.setCodigoPegatina(actual.getCodigoPegatina());
         
         return estudianteRepo.save(entidadModificada);
     }
@@ -157,12 +161,15 @@ public class EstudianteService {
             try {
                 EstudianteNuevoDto dtoNuevo = item.dto;
                 
-                // Mapeo Catálogo
-                InstitutoDto insti = catalogoClient.buscarInstitutoPorNombre(item.nombreInstituto);
+                // Mapeo local de instituto
+                String nombreInstituto = item.nombreInstituto != null ? item.nombreInstituto.trim() : null;
+                Instituto insti = (nombreInstituto == null || nombreInstituto.isEmpty())
+                        ? null
+                        : institutoRepo.findByNombreIgnoreCase(nombreInstituto).orElse(null);
                 if (insti != null) {
                     dtoNuevo.setIdInstituto(insti.getId());
                 } else {
-                    throw new CatalogoException("Instituto no encontrado en el catálogo: " + item.nombreInstituto);
+                    throw new CatalogoException("Instituto no encontrado en local: " + item.nombreInstituto);
                 }
 
                 Set<Long> setMaterias = new HashSet<>();
@@ -196,7 +203,7 @@ public class EstudianteService {
     // Metodos auxiliares privados para externalizar datos y validar relaciones
 
     private EstudianteDto rellenarDatosExternos(Estudiante estudiante) {
-        InstitutoDto insti = catalogoClient.getInstituto(estudiante.getIdInstituto());
+        InstitutoDto insti = obtenerInstitutoLocal(estudiante.getIdInstituto());
         
         Set<MateriaDto> materiasList = new HashSet<>();
         for (Long idMateria : estudiante.getMateriasMatriculadas()) {
@@ -211,16 +218,38 @@ public class EstudianteService {
     
     private void validarRelaciones(EstudianteNuevoDto dto) {
         if (dto.getIdInstituto() != null) {
-            if (catalogoClient.getInstituto(dto.getIdInstituto()) == null) {
-                throw new EstudianteNoEncontradoException("Instituto no encontrado");
+            if (!institutoRepo.existsById(dto.getIdInstituto())) {
+                throw new InstitutoNoEncontradoException("Instituto no encontrado");
             }
         }
         if (dto.getMateriasMatriculadas() != null) {
             for (Long idMat : dto.getMateriasMatriculadas()) {
                 if (catalogoClient.getMateria(idMat) == null) {
-                    throw new EstudianteNoEncontradoException("Materia no encontrada");
+                    throw new MateriaNoEncontradaException("Materia no encontrada");
                 }
             }
         }
+    }
+
+    private InstitutoDto obtenerInstitutoLocal(Long idInstituto) {
+        if (idInstituto == null) {
+            return null;
+        }
+
+        return institutoRepo.findById(idInstituto)
+                .map(this::mapInstituto)
+                .orElse(null);
+    }
+
+    private InstitutoDto mapInstituto(Instituto instituto) {
+        InstitutoDto dto = new InstitutoDto();
+        dto.setId(instituto.getId());
+        dto.setNombre(instituto.getNombre());
+        dto.setDireccion1(instituto.getDireccion1());
+        dto.setDireccion2(instituto.getDireccion2());
+        dto.setLocalidad(instituto.getLocalidad());
+        dto.setCodigoPostal(instituto.getCodigoPostal());
+        dto.setPais(instituto.getPais());
+        return dto;
     }
 }

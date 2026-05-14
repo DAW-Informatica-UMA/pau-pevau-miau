@@ -59,7 +59,7 @@ public class EstudianteController {
 
     @Operation(summary = "Eliminar estudiante", description = "Elimina un estudiante si no está bloqueado")
     @ApiResponses({
-            @ApiResponse(responseCode = "204", description = "Estudiante eliminado"),
+            @ApiResponse(responseCode = "200", description = "Estudiante eliminado"),
             @ApiResponse(responseCode = "404", description = "Estudiante no encontrado"),
             @ApiResponse(responseCode = "409", description = "El estudiante está bloqueado")
     })
@@ -67,7 +67,7 @@ public class EstudianteController {
     @DeleteMapping("/{idEstudiante}")
     public ResponseEntity<Void> eliminarEstudiante(@PathVariable Long idEstudiante) {
         estudianteService.eliminarEstudiante(idEstudiante);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok().build();
     }
 
     @Operation(summary = "Consultar estudiantes", description = "Devuelve una lista filtrada de estudiantes")

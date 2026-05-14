@@ -6,12 +6,12 @@ import es.uma.informatica.daw.miau.pau_pevau.services.InstitutoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import java.net.URI;
 import java.util.List;
 
 @RestController
@@ -40,7 +40,12 @@ public class InstitutoController {
     @Operation(operationId = "crearInstituto")
     @PreAuthorize("hasRole('ADMINISTRADOR')")
     public ResponseEntity<InstitutoDto> createInstituto(@RequestBody InstitutoNuevoDto dto) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(institutoService.crearInstituto(dto));
+        InstitutoDto creado = institutoService.crearInstituto(dto);
+        URI location = ServletUriComponentsBuilder.fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(creado.getId())
+                .toUri();
+        return ResponseEntity.created(location).body(creado);
     }
 
     @PutMapping("/{idInstituto}")
@@ -55,6 +60,6 @@ public class InstitutoController {
     @PreAuthorize("hasRole('ADMINISTRADOR')")
     public ResponseEntity<Void> deleteInstituto(@PathVariable Long idInstituto) {
         institutoService.eliminarInstituto(idInstituto);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok().build();
     }
 }
