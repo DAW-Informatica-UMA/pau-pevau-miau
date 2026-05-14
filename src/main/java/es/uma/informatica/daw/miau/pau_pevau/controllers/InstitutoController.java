@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -23,30 +24,35 @@ public class InstitutoController {
 
     @GetMapping
     @Operation(operationId = "consultarInstitutos")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'VICERRECTORADO')")
     public ResponseEntity<List<InstitutoDto>> getInstitutos() {
         return ResponseEntity.ok(institutoService.consultarInstitutos());
     }
 
     @GetMapping("/{idInstituto}")
     @Operation(operationId = "consultarInstituto")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'VICERRECTORADO')")
     public ResponseEntity<InstitutoDto> getInstituto(@PathVariable Long idInstituto) {
         return ResponseEntity.ok(institutoService.consultarInstituto(idInstituto));
     }
 
     @PostMapping
     @Operation(operationId = "crearInstituto")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     public ResponseEntity<InstitutoDto> createInstituto(@RequestBody InstitutoNuevoDto dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(institutoService.crearInstituto(dto));
     }
 
     @PutMapping("/{idInstituto}")
     @Operation(operationId = "actualizarInstituto")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     public ResponseEntity<InstitutoDto> updateInstituto(@PathVariable Long idInstituto, @RequestBody InstitutoNuevoDto dto) {
         return ResponseEntity.ok(institutoService.actualizarInstituto(idInstituto, dto));
     }
 
     @DeleteMapping("/{idInstituto}")
     @Operation(operationId = "eliminarInstituto")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     public ResponseEntity<Void> deleteInstituto(@PathVariable Long idInstituto) {
         institutoService.eliminarInstituto(idInstituto);
         return ResponseEntity.noContent().build();

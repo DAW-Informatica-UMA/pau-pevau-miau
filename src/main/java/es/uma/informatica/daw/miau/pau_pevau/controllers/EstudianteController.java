@@ -12,6 +12,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
@@ -36,6 +37,7 @@ public class EstudianteController {
             @ApiResponse(responseCode = "200", description = "Estudiante encontrado"),
             @ApiResponse(responseCode = "404", description = "Estudiante no encontrado")
     })
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'VICERRECTORADO')")
     @GetMapping("/{idEstudiante}")
     public ResponseEntity<EstudianteDto> consultarEstudiante(@PathVariable Long idEstudiante) {
         return ResponseEntity.ok(estudianteService.consultarEstudiante(idEstudiante));
@@ -48,6 +50,7 @@ public class EstudianteController {
             @ApiResponse(responseCode = "404", description = "Estudiante no encontrado"),
             @ApiResponse(responseCode = "409", description = "DNI duplicado o conflicto de estado")
     })
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @PutMapping("/{idEstudiante}")
     public ResponseEntity<EstudianteDto> actualizarEstudiante(
             @PathVariable Long idEstudiante,
@@ -61,6 +64,7 @@ public class EstudianteController {
             @ApiResponse(responseCode = "404", description = "Estudiante no encontrado"),
             @ApiResponse(responseCode = "409", description = "El estudiante está bloqueado")
     })
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @DeleteMapping("/{idEstudiante}")
     public ResponseEntity<Void> eliminarEstudiante(@PathVariable Long idEstudiante) {
         estudianteService.eliminarEstudiante(idEstudiante);
@@ -68,6 +72,7 @@ public class EstudianteController {
     }
 
     @Operation(summary = "Consultar estudiantes", description = "Devuelve una lista filtrada de estudiantes")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'VICERRECTORADO')")
     @GetMapping
     public ResponseEntity<List<EstudianteDto>> consultarEstudiantes(
             @RequestParam(required = false) Long idSede,
@@ -81,6 +86,7 @@ public class EstudianteController {
             @ApiResponse(responseCode = "400", description = "Datos inválidos"),
             @ApiResponse(responseCode = "409", description = "El DNI ya existe")
     })
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @PostMapping
     public ResponseEntity<EstudianteDto> crearEstudiante(@Valid @RequestBody EstudianteNuevoDto estudianteNuevo) {
         EstudianteDto creado = estudianteService.crearEstudiante(estudianteNuevo);
@@ -92,6 +98,7 @@ public class EstudianteController {
     }
 
     @Operation(summary = "Importar estudiantes CSV", description = "Sube un archivo CSV para importar múltiples estudiantes")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @PostMapping(value = "/upload", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ImportacionEstudiantes> importarEstudiantes(
             @RequestParam("ficheroEstudiantes") MultipartFile ficheroEstudiantes) {
