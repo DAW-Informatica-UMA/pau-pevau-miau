@@ -28,7 +28,8 @@ public class CsvEstudianteParser {
                 resultado.add(new EstudianteParseado(dtoFaltante, "Faltan campos obligatorios", null, null));
                 continue;
             }
-            
+
+            // Extraer datos del CSV a DTO
             EstudianteNuevoDto dtoNuevo = new EstudianteNuevoDto();
             dtoNuevo.setDni(columnas[4].trim());
             

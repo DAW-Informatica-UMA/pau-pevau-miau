@@ -8,6 +8,8 @@ import java.util.ArrayList;
 import java.util.Set;
 import java.util.UUID;
 
+// Para pasar de DTO a entidad y viceversa, evitando que el controlador tenga que conocer detalles de la entidad o que la entidad tenga que conocer detalles del DTO
+
 @Component
 public class EstudianteMapper {
 

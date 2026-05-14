@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+// Para la comunicacion con otros microservicios. 
 @Component
 public class CatalogoClient {
 
