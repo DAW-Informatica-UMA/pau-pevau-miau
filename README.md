@@ -10,12 +10,12 @@
 
 ---
 
-## ✦ Descripción del Proyecto
+## ⏣ Descripción del Proyecto
 
 Este repositorio contiene un microservicio REST desarrollado para la asignatura **Desarrollo de Aplicaciones Web (DAW)** de la Universidad de Málaga (UMA). 
 
 > [!IMPORTANT]
-> **✧ Objetivo Principal:** > El sistema está diseñado específicamente para la gestión de la información del estudiantado y los centros (institutos) en el marco de las pruebas PEvAU, garantizando un acceso seguro según el rol del usuario.
+> **⬡ Objetivo Principal:** > El sistema está diseñado específicamente para la gestión de la información del estudiantado y los centros (institutos) en el marco de las pruebas PEvAU, garantizando un acceso seguro según el rol del usuario.
 
 **Funcionalidades principales:**
 
@@ -29,14 +29,14 @@ Este repositorio contiene un microservicio REST desarrollado para la asignatura 
 
 ---
 
-## ✧ Integrantes del Equipo
+## ⬡ Integrantes del Equipo
 
-| ✦ Nombre del Integrante |
+| ⏣ Nombre del Integrante |
 | :--- |
 | • Francisco Bravo Bravo |
-| • Juan Victor Palomo Martinez |
-| • Patricia Jia Hoyo Marqués |
-| • Javier Coronado Torres-Pardo |
+| • Juan Víctor Palomo Martínez |
+| • ~Patricia Jia Hoyo Marqués~ |
+| • Javiér Coronado Torres-Pardo |
 | • Mihai Cristian Mita |
 
 ---
@@ -56,96 +56,26 @@ Este repositorio contiene un microservicio REST desarrollado para la asignatura 
 </div>
 
 ---
+## ❖ Ejecucion
 
-## ❖ Puesta en Marcha
 > [!NOTE]
-> **✦ Requisitos Previos:** Asegúrate de tener instalado Java 17 y Maven en tu sistema antes de compilar el proyecto.
-
-**Pasos para ejecutar en local:**
-
-1. Clona este repositorio:
-   ```bash
-   git clone [https://github.com/tu-usuario/pevau-miau.git](https://github.com/tu-usuario/pevau-miau.git)
-```
-
-2. Navega al directorio del proyecto:
-```bash
-cd pevau-miau
-
-```
-
-
-3. Construye el proyecto con el Wrapper de Maven (incluido en el repositorio):
-```bash
-./mvnw clean install
-
-```
-
-
-4. Levanta el servidor:
-```bash
-./mvnw spring-boot:run
-
-```
-
-
+> **⏣ Ejecución Rápida (Req: Java 17):**
+> ```bash
+> git clone [https://github.com/tu-usuario/pevau-miau.git](https://github.com/tu-usuario/pevau-miau.git) && cd pevau-miau && ./mvnw spring-boot:run
+> ```
 
 ---
 
-## ✦ Endpoints de la API
+## ⏣ API REST (Autenticación JWT)
 
-El sistema está protegido mediante autenticación **JWT**. Las rutas requieren permisos específicos (roles como `ADMINISTRADOR` o `VICERRECTORADO`).
+Prueba todas las rutas en la documentación de Swagger: `/swagger-ui/index.html`
 
-> [!TIP]
-> **✦ Documentación Interactiva:** Puedes explorar, enviar el token y probar todos los endpoints accediendo a Swagger UI en la ruta `/swagger-ui/index.html` (o la ruta que genere Swagger en tu entorno local).
-
-### ➤ Gestión de Estudiantes (`/estudiantes`)
-
-| Método | Endpoint | Descripción |
-| --- | --- | --- |
-|  | `/` | Lista estudiantes (filtrable por sede y convocatoria). |
-|  | `/` | Crea un nuevo estudiante manualmente. |
-|  | `/{idEstudiante}` | Obtiene los detalles de un estudiante específico. |
-|  | `/{idEstudiante}` | Actualiza los datos de un estudiante. |
-|  | `/{idEstudiante}` | Elimina un estudiante (si no está bloqueado). |
-|  | `/upload` | Importa estudiantes de forma masiva mediante archivo CSV. |
-
-### ➤ Gestión de Institutos (`/institutos`)
-
-| Método | Endpoint | Descripción |
-| --- | --- | --- |
-|  | `/` | Obtiene el listado de todos los institutos. |
-|  | `/` | Registra un nuevo instituto. |
-|  | `/{idInstituto}` | Obtiene los detalles de un instituto específico. |
-|  | `/{idInstituto}` | Actualiza la información de un instituto. |
-|  | `/{idInstituto}` | Elimina un instituto del sistema. |
+➤ **`/estudiantes`**: Operaciones CRUD completas + `/upload` para importación masiva CSV.
+➤ **`/institutos`**: Operaciones CRUD completas.
 
 ---
 
-## ✧ Arquitectura del Sistema
+## ⬡ Arquitectura y Estado
 
-El proyecto sigue una arquitectura clásica de capas de Spring Boot para separar responsabilidades de manera limpia:
-
-```text
-src/main/java/es/uma/informatica/daw/miau/pau_pevau
- ├── 📂 controllers    # Controladores REST (Estudiantes, Institutos...)
- ├── 📂 services       # Lógica de negocio y procesamiento de CSVs
- ├── 📂 models         # DTOs y modelos de transferencia de datos
- ├── 📂 entities       # Entidades JPA mapeadas a la base de datos
- ├── 📂 repositories   # Interfaces de acceso a datos (Spring Data JPA)
- ├── 📂 security       # Configuración JWT y filtros de autenticación
- └── 📂 exceptions     # Manejo global de errores y excepciones personalizadas
-
-```
-
----
-
-## ❖ Próximos Pasos
-
-* [x] Configuración inicial y conexión a BD H2.
-* [x] Lógica de importación de estudiantes por CSV.
-* [x] Refactorización e implementación de seguridad con JWT.
-* [ ] Añadir tests de integración para asegurar los endpoints con seguridad.
-* [ ] Mejorar la trazabilidad de errores durante la subida masiva de archivos.
-
-```
+➤ **Estructura:** Arquitectura clásica de Spring Boot (Controllers, Services, Models, Repositories, Security).
+➤ **Pendiente:** Implementar tests de integración y mejorar la trazabilidad de errores.
