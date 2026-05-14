@@ -3,68 +3,72 @@ package es.uma.informatica.daw.miau.pau_pevau.services;
 import es.uma.informatica.daw.miau.pau_pevau.entities.Instituto;
 import es.uma.informatica.daw.miau.pau_pevau.models.InstitutoDto;
 import es.uma.informatica.daw.miau.pau_pevau.models.InstitutoNuevoDto;
-import es.uma.informatica.daw.miau.pau_pevau.repositories.InstitutoRepository;
 import es.uma.informatica.daw.miau.pau_pevau.repositories.EstudianteRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import es.uma.informatica.daw.miau.pau_pevau.repositories.InstitutoRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
+@Transactional
 public class InstitutoService {
-    private final InstitutoRepository repository;
-    private final EstudianteRepository estudianteRepository;
 
-    @Autowired
-    public InstitutoService(InstitutoRepository repository, EstudianteRepository estudianteRepository) {
-        this.repository = repository;
-        this.estudianteRepository = estudianteRepository;
-    }
+    private final InstitutoRepository institutoRepo;
+    private final EstudianteRepository estudianteRepo;
 
-    public List<InstitutoDto> obtenerTodos() {
-        return repository.findAll().stream()
-                .map(this::entityToDto)
-                .collect(Collectors.toList());
-    }
-
-    public InstitutoDto obtenerPorId(Long id) {
-        return repository.findById(id)
-                .map(this::entityToDto)
-                .orElseThrow(() -> new RuntimeException("NOT_FOUND"));
-    }
-
-    @Transactional
-    public InstitutoDto crear(InstitutoNuevoDto dto) {
-        Instituto instituto = dtoToEntity(dto);
-        return entityToDto(repository.save(instituto));
-    }
-
-    @Transactional
-    public InstitutoDto actualizar(Long id, InstitutoNuevoDto dto) {
-        Instituto instituto = repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("NOT_FOUND"));
-
-        instituto.setNombre(dto.getNombre());
-        instituto.setDireccion1(dto.getDireccion1());
-        instituto.setDireccion2(dto.getDireccion2());
-        instituto.setLocalidad(dto.getLocalidad());
-        instituto.setCodigoPostal(dto.getCodigoPostal());
-        instituto.setPais(dto.getPais());
-
-        return entityToDto(repository.save(instituto));
-    }
-
-    @Transactional
-    public void eliminar(Long id) {
-        if (!repository.existsById(id)) {
-            throw new RuntimeException("NOT_FOUND");
+    @Transactional(readOnly = true)
+    public List<InstitutoDto> consultarInstitutos() {
+        List<Instituto> entities = institutoRepo.findAll();
+        List<InstitutoDto> result = new ArrayList<>();
+        for (Instituto entity : entities) {
+            result.add(entityToDto(entity));
         }
-        if (estudianteRepository.existsByIdInstituto(id)) {
-            throw new RuntimeException("CONFLICT");
+        return result;
+    }
+
+    @Transactional(readOnly = true)
+    public InstitutoDto consultarInstituto(Long idInstituto) {
+        Instituto current = institutoRepo.findById(idInstituto)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Instituto no encontrado"));
+        return entityToDto(current);
+    }
+
+    public InstitutoDto crearInstituto(InstitutoNuevoDto dto) {
+        Instituto entity = dtoToEntity(dto);
+        Instituto saved = institutoRepo.save(entity);
+        return entityToDto(saved);
+    }
+
+    public InstitutoDto actualizarInstituto(Long idInstituto, InstitutoNuevoDto modified) {
+        Instituto current = institutoRepo.findById(idInstituto)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Instituto no encontrado"));
+
+        current.setNombre(modified.getNombre());
+        current.setDireccion1(modified.getDireccion1());
+        current.setDireccion2(modified.getDireccion2());
+        current.setLocalidad(modified.getLocalidad());
+        current.setCodigoPostal(modified.getCodigoPostal());
+        current.setPais(modified.getPais());
+
+        Instituto saved = institutoRepo.save(current);
+        return entityToDto(saved);
+    }
+
+    public void eliminarInstituto(Long idInstituto) {
+        Instituto current = institutoRepo.findById(idInstituto)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Instituto no encontrado"));
+
+        if (estudianteRepo.existsByIdInstituto(idInstituto)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "El instituto no se puede eliminar porque tiene estudiantes asignados");
         }
-        repository.deleteById(id);
+        
+        institutoRepo.delete(current);
     }
 
     private InstitutoDto entityToDto(Instituto entity) {
