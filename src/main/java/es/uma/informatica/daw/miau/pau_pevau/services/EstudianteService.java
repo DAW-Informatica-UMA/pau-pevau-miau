@@ -30,17 +30,20 @@ public class EstudianteService {
     @Value("${pau_pevau.convocatoria.vigente:1}")
     private Long CONVOCATORIA_VIGENTE;
 
+    // Busca un estudiante por ID y devuelve sus datos con información del catálogo
     public EstudianteDto consultarEstudiante(Long idEstudiante) {
         Estudiante actual = buscarEstudianteBD(idEstudiante);
         return rellenarDatosExternos(actual);
     }
-    
+
+    // Método privado que busca un estudiante en BD por ID, lanza excepción si no existe
     @Transactional(readOnly = true)
     private Estudiante buscarEstudianteBD(Long idEstudiante) {
         return estudianteRepo.findById(idEstudiante)
                 .orElseThrow(() -> new EstudianteNoEncontradoException("Estudiante no encontrado"));
     }
 
+    // Devuelve lista de estudiantes filtrados por sede y convocatoria (vigente si no se especifica)
     public List<EstudianteDto> consultarEstudiantes(Long idSede, Long idConvocatoria) {
         if (idConvocatoria == null) {
             idConvocatoria = CONVOCATORIA_VIGENTE;
@@ -55,6 +58,7 @@ public class EstudianteService {
         return resultado;
     }
     
+    // Método privado que busca en BD estudiantes por sede y convocatoria
     @Transactional(readOnly = true)
     private List<Estudiante> buscarEstudiantesBD(Long idSede, Long idConvocatoria) {
         if (idSede != null) {
@@ -64,6 +68,7 @@ public class EstudianteService {
         }
     }
 
+    // Crea un nuevo estudiante validando relaciones y verifica que el DNI no esté duplicado
     public EstudianteDto crearEstudiante(EstudianteNuevoDto estudianteNuevo) {
         validarRelaciones(estudianteNuevo);
         
@@ -72,6 +77,7 @@ public class EstudianteService {
         return rellenarDatosExternos(guardado);
     }
     
+    // Método privado que persiste un nuevo estudiante en BD tras validar duplicidad de DNI
     @Transactional
     private Estudiante guardarEstudianteNuevoBD(EstudianteNuevoDto estudianteNuevo) {
         if (estudianteRepo.existsByDniAndIdConvocatoria(estudianteNuevo.getDni(), CONVOCATORIA_VIGENTE)) {
@@ -82,6 +88,7 @@ public class EstudianteService {
         return estudianteRepo.save(entidad);
     }
 
+    // Actualiza datos de un estudiante manteniendo DNI único y respetando bloqueo de no eliminable
     public EstudianteDto actualizarEstudiante(Long idEstudiante, EstudianteNuevoDto modificado) {
         validarRelaciones(modificado);
         
@@ -90,6 +97,7 @@ public class EstudianteService {
         return rellenarDatosExternos(guardado);
     }
     
+    // Método privado que persiste cambios en un estudiante existente en BD
     @Transactional
     private Estudiante actualizarEstudianteBD(Long idEstudiante, EstudianteNuevoDto modificado) {
         Estudiante actual = buscarEstudianteBD(idEstudiante);
@@ -114,6 +122,7 @@ public class EstudianteService {
         return estudianteRepo.save(entidadModificada);
     }
 
+    // Elimina un estudiante de BD si no está bloqueado (marcado como no eliminable)
     @Transactional
     public void eliminarEstudiante(Long idEstudiante) {
         Estudiante actual = buscarEstudianteBD(idEstudiante);
@@ -125,14 +134,17 @@ public class EstudianteService {
         estudianteRepo.delete(actual);
     }
 
+    // Importa estudiantes desde líneas CSV en paralelo, validando campos obligatorios y existencia en catálogo
     public ImportacionEstudiantes importarEstudiantes(List<String> lineasCsv) {
         ImportacionEstudiantes wrapper = new ImportacionEstudiantes();
         wrapper.setImportados(new ArrayList<>());
         wrapper.setNoImportados(new ArrayList<>());
 
+        // Usamos parallel dado al tamaño grande del CSV.
         lineasCsv.parallelStream().forEach(linea -> {
             String[] columnas = linea.split(";");
             
+            // Validamos que los campos obligatorios estén presentes (DNI, nombre, primer apellido, instituto)
             if (columnas.length < 5 || columnas[0].trim().isEmpty() || columnas[1].trim().isEmpty() || 
                 columnas[4].trim().isEmpty()) {
                 ProblemaImportacion problemaRegistro = new ProblemaImportacion();
@@ -158,6 +170,7 @@ public class EstudianteService {
             }
             dtoNuevo.setNombreCompleto(nb);
             
+            // Consultas externas desde catalogo para validar instituto y materias, y obtener sus IDs
             try {
                 String nombreInstituto = columnas[0].trim();
                 InstitutoDto institutoEncontrado = catalogoClient.buscarInstitutoPorNombre(nombreInstituto);
@@ -183,6 +196,7 @@ public class EstudianteService {
                 dtoNuevo.setMateriasMatriculadas(setMaterias);
 
                 EstudianteDto guardadoClase = null;
+                // Para evitar condiciones de carrera
                 synchronized (this) {
                     guardadoClase = crearEstudiante(dtoNuevo);
                 }
@@ -203,6 +217,8 @@ public class EstudianteService {
         
         return wrapper;
     }
+
+    // Metodos auxiliares privados para externalizar datos y validar relaciones
 
     private EstudianteDto rellenarDatosExternos(Estudiante estudiante) {
         InstitutoDto insti = catalogoClient.getInstituto(estudiante.getIdInstituto());

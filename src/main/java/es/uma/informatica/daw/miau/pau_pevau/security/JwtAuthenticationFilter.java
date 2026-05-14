@@ -33,6 +33,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (header != null && header.startsWith("Bearer ")) {
             String token = header.substring(7);
             try {
+                // Verificar y parsear el token JWT
                 Claims claims = Jwts.parser()
                         .verifyWith(Keys.hmacShaKeyFor(SECRET_KEY.getBytes(StandardCharsets.UTF_8)))
                         .build()
@@ -45,10 +46,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     roles = new ArrayList<>();
                 }
 
+                // Convertir roles al prejiso "ROLE_" que Spring Security espera
                 List<SimpleGrantedAuthority> authorities = roles.stream()
                         .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
                         .collect(Collectors.toList());
 
+                // Crear un objeto de autenticación con el userId y los roles
                 UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
                         userId, null, authorities
                 );
@@ -58,7 +61,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 SecurityContextHolder.clearContext();
             }
         }
-
+        // Para otros filtros
         filterChain.doFilter(request, response);
     }
 }

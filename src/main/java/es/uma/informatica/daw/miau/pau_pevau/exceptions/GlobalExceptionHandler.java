@@ -8,6 +8,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.stream.Collectors;
 
+// Manejador de excepciones. Convierte las excepciones personalizadas en respuestas HTTP con códigos de estado y mensajes adecuados segun la especificacion de swagger
+
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -37,5 +39,10 @@ public class GlobalExceptionHandler {
                 .map(error -> error.getField() + ": " + error.getDefaultMessage())
                 .collect(Collectors.joining(", "));
         return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, errorMessage);
+    }
+
+    @ExceptionHandler(CsvLecturaException.class)
+    public ProblemDetail handleCsvLecturaException(CsvLecturaException e) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
     }
 }

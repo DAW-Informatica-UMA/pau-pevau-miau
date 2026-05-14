@@ -4,18 +4,17 @@ import es.uma.informatica.daw.miau.pau_pevau.models.EstudianteDto;
 import es.uma.informatica.daw.miau.pau_pevau.models.EstudianteNuevoDto;
 import es.uma.informatica.daw.miau.pau_pevau.models.ImportacionEstudiantes;
 import es.uma.informatica.daw.miau.pau_pevau.services.EstudianteService;
+import es.uma.informatica.daw.miau.pau_pevau.exceptions.CsvLecturaException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.io.BufferedReader;
@@ -60,7 +59,7 @@ public class EstudianteController {
 
     @Operation(summary = "Eliminar estudiante", description = "Elimina un estudiante si no está bloqueado")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Estudiante eliminado"),
+            @ApiResponse(responseCode = "204", description = "Estudiante eliminado"),
             @ApiResponse(responseCode = "404", description = "Estudiante no encontrado"),
             @ApiResponse(responseCode = "409", description = "El estudiante está bloqueado")
     })
@@ -68,7 +67,7 @@ public class EstudianteController {
     @DeleteMapping("/{idEstudiante}")
     public ResponseEntity<Void> eliminarEstudiante(@PathVariable Long idEstudiante) {
         estudianteService.eliminarEstudiante(idEstudiante);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.noContent().build();
     }
 
     @Operation(summary = "Consultar estudiantes", description = "Devuelve una lista filtrada de estudiantes")
@@ -103,14 +102,21 @@ public class EstudianteController {
     public ResponseEntity<ImportacionEstudiantes> importarEstudiantes(
             @RequestParam("ficheroEstudiantes") MultipartFile ficheroEstudiantes) {
         
+        if (ficheroEstudiantes.isEmpty()) {
+            throw new CsvLecturaException("El archivo CSV proporcionado está vacío");
+        }
+        
         List<String> lineas = new ArrayList<>();
         try (BufferedReader br = new BufferedReader(new InputStreamReader(ficheroEstudiantes.getInputStream()))) {
             String linea = br.readLine(); // Saltar header
+            if (linea == null) {
+                throw new CsvLecturaException("El archivo CSV no tiene el formato esperado");
+            }
             while ((linea = br.readLine()) != null) {
                 lineas.add(linea);
             }
         } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Ha fallado la lectura del CSV");
+            throw new CsvLecturaException("Ha fallado la lectura del CSV: " + e.getMessage());
         }
         
         return ResponseEntity.ok(estudianteService.importarEstudiantes(lineas));
