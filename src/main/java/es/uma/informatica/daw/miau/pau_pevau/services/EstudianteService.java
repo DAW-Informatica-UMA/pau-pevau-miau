@@ -2,56 +2,51 @@ package es.uma.informatica.daw.miau.pau_pevau.services;
 
 import es.uma.informatica.daw.miau.pau_pevau.clients.CatalogoClient;
 import es.uma.informatica.daw.miau.pau_pevau.entities.Estudiante;
+import es.uma.informatica.daw.miau.pau_pevau.exceptions.CatalogoException;
+import es.uma.informatica.daw.miau.pau_pevau.exceptions.DniDuplicadoException;
+import es.uma.informatica.daw.miau.pau_pevau.exceptions.EstudianteBloqueadoException;
+import es.uma.informatica.daw.miau.pau_pevau.exceptions.EstudianteNoEncontradoException;
 import es.uma.informatica.daw.miau.pau_pevau.mappers.EstudianteMapper;
 import es.uma.informatica.daw.miau.pau_pevau.models.*;
 import es.uma.informatica.daw.miau.pau_pevau.repositories.EstudianteRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.server.ResponseStatusException;
+import org.springframework.beans.factory.annotation.Value;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import org.springframework.beans.factory.annotation.Value;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
 public class EstudianteService {
 
     private final EstudianteRepository estudianteRepo;
     private final EstudianteMapper mapper;
     private final CatalogoClient catalogoClient;
 
-    // Para no tener que recompilar todo cuando cambie la convocatoria vigente
     @Value("${pau_pevau.convocatoria.vigente:1}")
     private Long CONVOCATORIA_VIGENTE;
 
-    @Transactional(readOnly = true)
     public EstudianteDto consultarEstudiante(Long idEstudiante) {
-        Estudiante actual = estudianteRepo.findById(idEstudiante)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Estudiante no encontrado"));
+        Estudiante actual = buscarEstudianteBD(idEstudiante);
         return rellenarDatosExternos(actual);
     }
-
+    
     @Transactional(readOnly = true)
+    private Estudiante buscarEstudianteBD(Long idEstudiante) {
+        return estudianteRepo.findById(idEstudiante)
+                .orElseThrow(() -> new EstudianteNoEncontradoException("Estudiante no encontrado"));
+    }
+
     public List<EstudianteDto> consultarEstudiantes(Long idSede, Long idConvocatoria) {
         if (idConvocatoria == null) {
             idConvocatoria = CONVOCATORIA_VIGENTE;
         }
 
-        List<Estudiante> lista;
-        if (idSede != null) {
-            lista = estudianteRepo.findByIdSedeAndIdConvocatoria(idSede, idConvocatoria);
-        } else {
-            lista = estudianteRepo.findByIdConvocatoria(idConvocatoria);
-        }
+        List<Estudiante> lista = buscarEstudiantesBD(idSede, idConvocatoria);
 
         List<EstudianteDto> resultado = new ArrayList<>();
         for (Estudiante e : lista) {
@@ -59,35 +54,55 @@ public class EstudianteService {
         }
         return resultado;
     }
+    
+    @Transactional(readOnly = true)
+    private List<Estudiante> buscarEstudiantesBD(Long idSede, Long idConvocatoria) {
+        if (idSede != null) {
+            return estudianteRepo.findByIdSedeAndIdConvocatoria(idSede, idConvocatoria);
+        } else {
+            return estudianteRepo.findByIdConvocatoria(idConvocatoria);
+        }
+    }
 
     public EstudianteDto crearEstudiante(EstudianteNuevoDto estudianteNuevo) {
         validarRelaciones(estudianteNuevo);
-        if (estudianteRepo.existsByDniAndIdConvocatoria(estudianteNuevo.getDni(), CONVOCATORIA_VIGENTE)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "El DNI ya existe en esta convocatoria");
-        }
-
-        Estudiante entidad = mapper.aEntidad(estudianteNuevo, CONVOCATORIA_VIGENTE);
-        Estudiante guardado = estudianteRepo.save(entidad);
+        
+        Estudiante guardado = guardarEstudianteNuevoBD(estudianteNuevo);
         
         return rellenarDatosExternos(guardado);
     }
+    
+    @Transactional
+    private Estudiante guardarEstudianteNuevoBD(EstudianteNuevoDto estudianteNuevo) {
+        if (estudianteRepo.existsByDniAndIdConvocatoria(estudianteNuevo.getDni(), CONVOCATORIA_VIGENTE)) {
+            throw new DniDuplicadoException("El DNI ya existe en esta convocatoria");
+        }
+
+        Estudiante entidad = mapper.aEntidad(estudianteNuevo, CONVOCATORIA_VIGENTE);
+        return estudianteRepo.save(entidad);
+    }
 
     public EstudianteDto actualizarEstudiante(Long idEstudiante, EstudianteNuevoDto modificado) {
-        Estudiante actual = estudianteRepo.findById(idEstudiante)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Estudiante no encontrado"));
-                
         validarRelaciones(modificado);
+        
+        Estudiante guardado = actualizarEstudianteBD(idEstudiante, modificado);
+        
+        return rellenarDatosExternos(guardado);
+    }
+    
+    @Transactional
+    private Estudiante actualizarEstudianteBD(Long idEstudiante, EstudianteNuevoDto modificado) {
+        Estudiante actual = buscarEstudianteBD(idEstudiante);
 
         if (!actual.getDni().equals(modificado.getDni())) {
             if (estudianteRepo.existsByDniAndIdConvocatoria(modificado.getDni(), CONVOCATORIA_VIGENTE)) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT, "Este DNI ya lo tiene otro alumno");
+                throw new DniDuplicadoException("Este DNI ya lo tiene otro alumno");
             }
         }
 
-        // Esto es para evitar que un alumno bloqueado se desbloquee por accidente al hacer una modificación.
         if (actual.isNoEliminar()) {
             if (modificado.getNoEliminar() != null && !modificado.getNoEliminar()) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT, "El estudiante está marcado como no eliminar, no se puede revocar ese estado.");
+                throw new EstudianteBloqueadoException("El estudiante está marcado como no eliminar, no se puede revocar ese estado.");
             }
             modificado.setNoEliminar(true);
         }
@@ -96,102 +111,99 @@ public class EstudianteService {
         entidadModificada.setId(actual.getId());
         entidadModificada.setCodigoPegatina(actual.getCodigoPegatina());
         
-        Estudiante guardado = estudianteRepo.save(entidadModificada);
-        return rellenarDatosExternos(guardado);
+        return estudianteRepo.save(entidadModificada);
     }
 
+    @Transactional
     public void eliminarEstudiante(Long idEstudiante) {
-        Estudiante actual = estudianteRepo.findById(idEstudiante)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Estudiante no encontrado"));
+        Estudiante actual = buscarEstudianteBD(idEstudiante);
 
         if (actual.isNoEliminar()) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Este estudiante está bloqueado y no se puede borrar");
+            throw new EstudianteBloqueadoException("Este estudiante está bloqueado y no se puede borrar");
         }
         
         estudianteRepo.delete(actual);
     }
 
-    public ImportacionEstudiantes importarEstudiantes(MultipartFile fichero) {
+    public ImportacionEstudiantes importarEstudiantes(List<String> lineasCsv) {
         ImportacionEstudiantes wrapper = new ImportacionEstudiantes();
         wrapper.setImportados(new ArrayList<>());
         wrapper.setNoImportados(new ArrayList<>());
 
-        try {
-            // Lo hemos hecho usando un bufferedreader como en otras asignaturas, saltamos la primera linea que es el header
-            BufferedReader br = new BufferedReader(new InputStreamReader(fichero.getInputStream()));
-            String linea = br.readLine();
+        lineasCsv.parallelStream().forEach(linea -> {
+            String[] columnas = linea.split(";");
             
-            while ((linea = br.readLine()) != null) {
-                String[] columnas = linea.split(";");
+            if (columnas.length < 5 || columnas[0].trim().isEmpty() || columnas[1].trim().isEmpty() || 
+                columnas[4].trim().isEmpty()) {
+                ProblemaImportacion problemaRegistro = new ProblemaImportacion();
+                EstudianteNuevoDto estudianteFaltante = new EstudianteNuevoDto();
+                estudianteFaltante.setDni(columnas.length > 4 ? columnas[4].trim() : "DESCONOCIDO");
+                problemaRegistro.setEstudiante(estudianteFaltante);
+                problemaRegistro.setProblemaImportacion("Faltan campos obligatorios");
                 
-                if (columnas.length < 5 || columnas[0].trim().isEmpty() || columnas[1].trim().isEmpty() || 
-                    columnas[4].trim().isEmpty()) {
-                    ProblemaImportacion problemaRegistro = new ProblemaImportacion();
-                    EstudianteNuevoDto estudianteFaltante = new EstudianteNuevoDto();
-                    estudianteFaltante.setDni(columnas.length > 4 ? columnas[4].trim() : "DESCONOCIDO");
-                    problemaRegistro.setEstudiante(estudianteFaltante);
-                    problemaRegistro.setProblemaImportacion("Faltan campos obligatorios");
+                synchronized (wrapper.getNoImportados()) {
                     wrapper.getNoImportados().add(problemaRegistro);
-                    continue;
                 }
+                return;
+            }
+            
+            EstudianteNuevoDto dtoNuevo = new EstudianteNuevoDto();
+            dtoNuevo.setDni(columnas[4].trim());
+            
+            NombreCompletoDto nb = new NombreCompletoDto();
+            nb.setNombre(columnas[1].trim());
+            nb.setApellido1(columnas[2].trim());
+            if (columnas.length > 3) {
+                nb.setApellido2(columnas[3].trim());
+            }
+            dtoNuevo.setNombreCompleto(nb);
+            
+            try {
+                String nombreInstituto = columnas[0].trim();
+                InstitutoDto institutoEncontrado = catalogoClient.buscarInstitutoPorNombre(nombreInstituto);
                 
-                EstudianteNuevoDto dtoNuevo = new EstudianteNuevoDto();
-                // CENTRO;Nombre;Apellido1;Apellido2;DNI/NIF;DETALLE_MATERIAS
-                dtoNuevo.setDni(columnas[4].trim());
+                if (institutoEncontrado != null) {
+                    dtoNuevo.setIdInstituto(institutoEncontrado.getId()); 
+                } else {
+                    throw new CatalogoException("Instituto no encontrado en el catálogo: " + nombreInstituto);
+                } 
                 
-                NombreCompletoDto nb = new NombreCompletoDto();
-                nb.setNombre(columnas[1].trim());
-                nb.setApellido1(columnas[2].trim());
-                if (columnas.length > 3) {
-                    nb.setApellido2(columnas[3].trim());
-                }
-                dtoNuevo.setNombreCompleto(nb);
-                
-                try {
-                    // Buscamos el instituto usando el endpint correcto
-                    String nombreInstituto = columnas[0].trim();
-                    InstitutoDto institutoEncontrado = catalogoClient.buscarInstitutoPorNombre(nombreInstituto);
-                    
-                    if (institutoEncontrado != null) {
-                        dtoNuevo.setIdInstituto(institutoEncontrado.getId()); 
-                    } else {
-                        // Si el microservicio no lo encuentra, da fallo para que se registre en la lista de NO importados.
-                        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Instituto no encontrado en el catálogo: " + nombreInstituto);
-                    } 
-                    
-                    Set<Long> setMaterias = new HashSet<>();
-                    if (columnas.length >= 6 && !columnas[5].trim().isEmpty()) {
-                        String[] nombresMaterias = columnas[5].split(",");
-                        for (String nomMateria : nombresMaterias) {
-                            MateriaDto MAT = catalogoClient.buscarMateriaPorNombre(nomMateria.trim());
-                            if (MAT != null) {
-                                setMaterias.add(MAT.getId());
-                            } else {
-                                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Materia no encontrada en el catálogo: " + nomMateria.trim());
-                            }
+                Set<Long> setMaterias = new HashSet<>();
+                if (columnas.length >= 6 && !columnas[5].trim().isEmpty()) {
+                    String[] nombresMaterias = columnas[5].split(",");
+                    for (String nomMateria : nombresMaterias) {
+                        MateriaDto MAT = catalogoClient.buscarMateriaPorNombre(nomMateria.trim());
+                        if (MAT != null) {
+                            setMaterias.add(MAT.getId());
+                        } else {
+                            throw new CatalogoException("Materia no encontrada en el catálogo: " + nomMateria.trim());
                         }
                     }
-                    dtoNuevo.setMateriasMatriculadas(setMaterias);
+                }
+                dtoNuevo.setMateriasMatriculadas(setMaterias);
 
-                    EstudianteDto guardadoClase = crearEstudiante(dtoNuevo);
+                EstudianteDto guardadoClase = null;
+                synchronized (this) {
+                    guardadoClase = crearEstudiante(dtoNuevo);
+                }
+                
+                synchronized (wrapper.getImportados()) {
                     wrapper.getImportados().add(guardadoClase);
-                } catch (ResponseStatusException e) {
-                    ProblemaImportacion problema = new ProblemaImportacion();
-                    problema.setEstudiante(dtoNuevo);
-                    problema.setProblemaImportacion(e.getReason());
+                }
+                
+            } catch (Exception e) {
+                ProblemaImportacion problema = new ProblemaImportacion();
+                problema.setEstudiante(dtoNuevo);
+                problema.setProblemaImportacion(e.getMessage());
+                synchronized (wrapper.getNoImportados()) {
                     wrapper.getNoImportados().add(problema);
                 }
             }
-            br.close();
-            
-        } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Ha fallado la lectura del CSV");
-        }
+        });
         
         return wrapper;
     }
 
-    // Funcion para cargar datos externos (instituto y materias) y rellenar el DTO completo a partir de la entidad.
     private EstudianteDto rellenarDatosExternos(Estudiante estudiante) {
         InstitutoDto insti = catalogoClient.getInstituto(estudiante.getIdInstituto());
         
@@ -209,13 +221,13 @@ public class EstudianteService {
     private void validarRelaciones(EstudianteNuevoDto dto) {
         if (dto.getIdInstituto() != null) {
             if (catalogoClient.getInstituto(dto.getIdInstituto()) == null) {
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Instituto no encontrado");
+                throw new EstudianteNoEncontradoException("Instituto no encontrado");
             }
         }
         if (dto.getMateriasMatriculadas() != null) {
             for (Long idMat : dto.getMateriasMatriculadas()) {
                 if (catalogoClient.getMateria(idMat) == null) {
-                    throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Materia no encontrada");
+                    throw new EstudianteNoEncontradoException("Materia no encontrada");
                 }
             }
         }

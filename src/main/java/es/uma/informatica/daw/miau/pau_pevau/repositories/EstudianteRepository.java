@@ -13,6 +13,8 @@ public interface EstudianteRepository extends JpaRepository<Estudiante, Long> {
 
     boolean existsByDniAndIdConvocatoria(String dni, Long idConvocatoria);
 
+    boolean existsByIdInstituto(Long idInstituto);
+
     boolean existsByDniAndIdConvocatoriaAndIdNot(String dni, Long idConvocatoria, Long id);
 
     boolean existsByIdAndNoEliminarTrue(Long id);
