@@ -2,19 +2,21 @@ package es.uma.informatica.daw.miau.pau_pevau.entities;
 
 import jakarta.persistence.*;
 import lombok.*;
+
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
 @Table(
-    name = "estudiante",
-    uniqueConstraints = {
-        @UniqueConstraint(name = "uk_estudiante_dni_convocatoria", columnNames = {"dni", "convocatoria_id"}),
-        @UniqueConstraint(name = "uk_estudiante_pegatina_convocatoria", columnNames = {"codigo_pegatina", "convocatoria_id"})
-    }
+        name = "estudiante",
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_estudiante_dni_convocatoria", columnNames = {"dni", "convocatoria_id"}),
+                @UniqueConstraint(name = "uk_estudiante_pegatina_convocatoria", columnNames = {"codigo_pegatina", "convocatoria_id"})
+        }
 )
 @Data
 @NoArgsConstructor
+@AllArgsConstructor
 @EqualsAndHashCode(of = {"dni", "idConvocatoria"})
 public class Estudiante {
 

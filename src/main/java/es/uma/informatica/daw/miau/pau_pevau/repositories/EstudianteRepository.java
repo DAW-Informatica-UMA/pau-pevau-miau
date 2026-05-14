@@ -30,4 +30,6 @@ public interface EstudianteRepository extends JpaRepository<Estudiante, Long> {
     List<Estudiante> findByIdSedeAndIdConvocatoria(Long idSede, Long idConvocatoria);
 
     List<Estudiante> findByIdSedeAndIdConvocatoria(Long idSede, Long idConvocatoria, Sort sort);
+
+    boolean existsByIdInstituto(Long idInstituto);
 }
