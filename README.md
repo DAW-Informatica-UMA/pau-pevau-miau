@@ -61,7 +61,7 @@ Este repositorio contiene un microservicio REST desarrollado para la asignatura 
 > [!NOTE]
 > **⏣ Ejecución Rápida (Req: Java 17):**
 > ```bash
-> git clone [https://github.com/tu-usuario/pevau-miau.git](https://github.com/tu-usuario/pevau-miau.git) && cd pevau-miau && ./mvnw spring-boot:run
+> git clone https://github.com/DAW-Informatica-UMA/pau-pevau-miau && cd pevau-miau && ./mvnw spring-boot:run
 > ```
 
 ---
