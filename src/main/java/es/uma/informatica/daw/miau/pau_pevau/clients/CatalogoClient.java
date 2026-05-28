@@ -5,17 +5,23 @@ import es.uma.informatica.daw.miau.pau_pevau.models.InstitutoDto;
 import es.uma.informatica.daw.miau.pau_pevau.models.MateriaDto;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-// Para la comunicacion con otros microservicios. 
+// Para la comunicacion con otros microservicios.
 @Component
 public class CatalogoClient {
 
@@ -41,13 +47,19 @@ public class CatalogoClient {
             return cached;
         }
         try {
-            InstitutoDto dto = restTemplate.getForObject(baseUrl + "/institutos/" + id, InstitutoDto.class);
+            ResponseEntity<InstitutoDto> response = restTemplate.exchange(
+                    baseUrl + "/institutos/" + id,
+                    HttpMethod.GET,
+                    buildAuthEntity(),
+                    InstitutoDto.class
+            );
+            InstitutoDto dto = response.getBody();
             if (dto != null) {
                 institutoByIdCache.put(id, dto);
             }
             return dto;
         } catch (HttpClientErrorException.NotFound e) {
-            return null; 
+            return null;
         } catch (Exception e) {
             throw new CatalogoException("Error de conexión con el catálogo al buscar instituto por ID");
         }
@@ -55,7 +67,7 @@ public class CatalogoClient {
 
     public InstitutoDto buscarInstitutoPorNombre(String nombre) {
         if (nombre == null || nombre.trim().isEmpty()) return null;
-        
+
         // Cache simple
         String cacheKey = nombre.toLowerCase().trim();
         if (institutoByNameCache.containsKey(cacheKey)) {
@@ -66,7 +78,7 @@ public class CatalogoClient {
             ResponseEntity<List<InstitutoDto>> response = restTemplate.exchange(
                     baseUrl + "/institutos",
                     HttpMethod.GET,
-                    null,
+                    buildAuthEntity(),
                     new ParameterizedTypeReference<List<InstitutoDto>>() {}
             );
             List<InstitutoDto> institutos = response.getBody();
@@ -94,11 +106,20 @@ public class CatalogoClient {
 
         MateriaDto cached = materiaByIdCache.get(id);
         if (cached != null) {
-            return cached;
+            return isMateriaEliminada(cached) ? null : cached;
         }
         try {
-            MateriaDto dto = restTemplate.getForObject(baseUrl + "/materias/" + id, MateriaDto.class);
+            ResponseEntity<MateriaDto> response = restTemplate.exchange(
+                    baseUrl + "/materias/" + id,
+                    HttpMethod.GET,
+                    buildAuthEntity(),
+                    MateriaDto.class
+            );
+            MateriaDto dto = response.getBody();
             if (dto != null) {
+                if (isMateriaEliminada(dto)) {
+                    return null;
+                }
                 materiaByIdCache.put(id, dto);
             }
             return dto;
@@ -111,7 +132,7 @@ public class CatalogoClient {
 
     public MateriaDto buscarMateriaPorNombre(String nombre) {
         if (nombre == null || nombre.trim().isEmpty()) return null;
-        
+
         String cacheKey = nombre.toLowerCase().trim();
         if (materiaByNameCache.containsKey(cacheKey)) {
             return materiaByNameCache.get(cacheKey);
@@ -121,12 +142,15 @@ public class CatalogoClient {
             ResponseEntity<List<MateriaDto>> response = restTemplate.exchange(
                     baseUrl + "/materias",
                     HttpMethod.GET,
-                    null,
+                    buildAuthEntity(),
                     new ParameterizedTypeReference<List<MateriaDto>>() {}
             );
             List<MateriaDto> materias = response.getBody();
             if (materias != null) {
                 for (MateriaDto materia : materias) {
+                    if (isMateriaEliminada(materia)) {
+                        continue;
+                    }
                     materiaByNameCache.put(materia.getNombre().toLowerCase().trim(), materia);
                     if (materia.getId() != null) {
                         materiaByIdCache.putIfAbsent(materia.getId(), materia);
@@ -142,5 +166,29 @@ public class CatalogoClient {
         } catch (Exception e) {
             throw new CatalogoException("Error de conexión con el catálogo al buscar materia por nombre");
         }
+    }
+
+    private boolean isMateriaEliminada(MateriaDto materia) {
+        return materia != null && Boolean.TRUE.equals(materia.getEliminada());
+    }
+
+    private HttpEntity<Void> buildAuthEntity() {
+        HttpHeaders headers = new HttpHeaders();
+        String authorization = resolveAuthorizationHeader();
+        if (authorization != null) {
+            headers.set(HttpHeaders.AUTHORIZATION, authorization);
+        }
+        return new HttpEntity<>(headers);
+    }
+
+    private String resolveAuthorizationHeader() {
+        if (RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes attrs) {
+            HttpServletRequest request = attrs.getRequest();
+            String header = request.getHeader(HttpHeaders.AUTHORIZATION);
+            if (header != null && !header.isBlank()) {
+                return header;
+            }
+        }
+        return null;
     }
 }
