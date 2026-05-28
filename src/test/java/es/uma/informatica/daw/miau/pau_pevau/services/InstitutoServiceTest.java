@@ -125,6 +125,23 @@ class InstitutoServiceTest {
     }
 
     @Test
+    @DisplayName("Debe lanzar excepcion 404 si se intenta actualizar un instituto inexistente")
+    void actualizarInstituto_NoExiste_LanzaExcepcion() {
+        // Arrange
+        Long id = 99L;
+        InstitutoNuevoDto dtoActualizado = new InstitutoNuevoDto();
+        dtoActualizado.setNombre("IES Nuevo");
+
+        when(institutoRepo.findById(id)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+                () -> institutoService.actualizarInstituto(id, dtoActualizado));
+        assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
+        verify(institutoRepo, never()).save(any());
+    }
+
+    @Test
     @DisplayName("Debe eliminar un instituto si existe y no tiene estudiantes asociados")
     void eliminarInstituto_SinEstudiantes_Exito() {
         // Arrange
@@ -139,6 +156,20 @@ class InstitutoServiceTest {
 
         // Assert
         verify(institutoRepo, times(1)).delete(instituto);
+    }
+
+    @Test
+    @DisplayName("Debe lanzar excepcion 404 si se intenta eliminar un instituto inexistente")
+    void eliminarInstituto_NoExiste_LanzaExcepcion() {
+        // Arrange
+        Long id = 99L;
+        when(institutoRepo.findById(id)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+                () -> institutoService.eliminarInstituto(id));
+        assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
+        verify(institutoRepo, never()).delete(any());
     }
 
     @Test
