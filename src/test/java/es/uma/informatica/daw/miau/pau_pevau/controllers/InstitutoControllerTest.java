@@ -11,14 +11,17 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doThrow;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -72,6 +75,21 @@ class InstitutoControllerTest {
     }
 
     @Test
+    @DisplayName("GET /institutos/{id} - Debe devolver 404 si no existe")
+    @WithMockUser(roles = "ADMINISTRADOR")
+    void getInstituto_NoExiste() throws Exception {
+    // Arrange
+    Long id = 99L;
+    when(institutoService.consultarInstituto(id))
+        .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Instituto no encontrado"));
+
+    // Act & Assert
+    mockMvc.perform(get("/institutos/{idInstituto}", id)
+            .contentType(MediaType.APPLICATION_JSON))
+        .andExpect(status().isNotFound());
+    }
+
+    @Test
     @DisplayName("POST /institutos - Debe devolver 201 Created al crear un instituto")
     @WithMockUser(roles = "ADMINISTRADOR")
     void createInstituto_Exito() throws Exception {
@@ -118,6 +136,25 @@ class InstitutoControllerTest {
     }
 
     @Test
+    @DisplayName("PUT /institutos/{id} - Debe devolver 404 si no existe")
+    @WithMockUser(roles = "ADMINISTRADOR")
+    void updateInstituto_NoExiste() throws Exception {
+    // Arrange
+    Long id = 99L;
+    InstitutoNuevoDto updateDto = new InstitutoNuevoDto();
+    updateDto.setNombre("IES Nuevo");
+
+    when(institutoService.actualizarInstituto(eq(id), any(InstitutoNuevoDto.class)))
+        .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Instituto no encontrado"));
+
+    // Act & Assert
+    mockMvc.perform(put("/institutos/{idInstituto}", id)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(updateDto)))
+        .andExpect(status().isNotFound());
+    }
+
+    @Test
     @DisplayName("DELETE /institutos/{id} - Debe devolver 200 OK al eliminar correctamente")
     @WithMockUser(roles = "ADMINISTRADOR")
     void deleteInstituto_Exito() throws Exception {
@@ -127,5 +164,35 @@ class InstitutoControllerTest {
         mockMvc.perform(delete("/institutos/{idInstituto}", id)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("DELETE /institutos/{id} - Debe devolver 404 si no existe")
+    @WithMockUser(roles = "ADMINISTRADOR")
+    void deleteInstituto_NoExiste() throws Exception {
+    // Arrange
+    Long id = 99L;
+    doThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Instituto no encontrado"))
+        .when(institutoService).eliminarInstituto(id);
+
+    // Act & Assert
+    mockMvc.perform(delete("/institutos/{idInstituto}", id)
+            .contentType(MediaType.APPLICATION_JSON))
+        .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("DELETE /institutos/{id} - Debe devolver 409 si tiene estudiantes")
+    @WithMockUser(roles = "ADMINISTRADOR")
+    void deleteInstituto_ConEstudiantes() throws Exception {
+    // Arrange
+    Long id = 1L;
+    doThrow(new ResponseStatusException(HttpStatus.CONFLICT, "Instituto con estudiantes"))
+        .when(institutoService).eliminarInstituto(id);
+
+    // Act & Assert
+    mockMvc.perform(delete("/institutos/{idInstituto}", id)
+            .contentType(MediaType.APPLICATION_JSON))
+        .andExpect(status().isConflict());
     }
 }

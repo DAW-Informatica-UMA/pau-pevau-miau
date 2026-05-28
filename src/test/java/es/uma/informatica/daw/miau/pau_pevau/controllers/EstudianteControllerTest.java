@@ -1,6 +1,10 @@
 package es.uma.informatica.daw.miau.pau_pevau.controllers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import es.uma.informatica.daw.miau.pau_pevau.exceptions.DniDuplicadoException;
+import es.uma.informatica.daw.miau.pau_pevau.exceptions.EstudianteBloqueadoException;
+import es.uma.informatica.daw.miau.pau_pevau.exceptions.EstudianteNoEncontradoException;
+import es.uma.informatica.daw.miau.pau_pevau.exceptions.GlobalExceptionHandler;
 import es.uma.informatica.daw.miau.pau_pevau.models.EstudianteDto;
 import es.uma.informatica.daw.miau.pau_pevau.models.NombreCompletoDto;
 import es.uma.informatica.daw.miau.pau_pevau.services.EstudianteService;
@@ -9,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
@@ -17,6 +22,7 @@ import es.uma.informatica.daw.miau.pau_pevau.models.EstudianteNuevoDto;
 
 
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doThrow;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -24,6 +30,7 @@ import static org.mockito.ArgumentMatchers.eq;
 
 @WebMvcTest(EstudianteController.class)
 @AutoConfigureMockMvc(addFilters = false)
+@Import(GlobalExceptionHandler.class)
 @DisplayName("Tests del Controlador REST de Estudiantes")
 class EstudianteControllerTest {
 
@@ -60,6 +67,21 @@ class EstudianteControllerTest {
     }
 
     @Test
+    @DisplayName("GET /estudiantes/{id} - Debe devolver 404 si no existe")
+    @WithMockUser(roles = "ADMINISTRADOR")
+    void getEstudiante_NoExiste() throws Exception {
+        // Arrange
+        Long id = 99L;
+        when(estudianteService.consultarEstudiante(id))
+                .thenThrow(new EstudianteNoEncontradoException("Estudiante no encontrado"));
+
+        // Act & Assert
+        mockMvc.perform(get("/estudiantes/{idEstudiante}", id)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     @DisplayName("DELETE /estudiantes/{id} - Debe devolver 200 OK al eliminar correctamente")
     @WithMockUser(roles = "ADMINISTRADOR")
     void deleteEstudiante_Exito() throws Exception {
@@ -70,6 +92,36 @@ class EstudianteControllerTest {
         mockMvc.perform(delete("/estudiantes/{idEstudiante}", id)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("DELETE /estudiantes/{id} - Debe devolver 404 si no existe")
+    @WithMockUser(roles = "ADMINISTRADOR")
+    void deleteEstudiante_NoExiste() throws Exception {
+        // Arrange
+        Long id = 99L;
+        doThrow(new EstudianteNoEncontradoException("Estudiante no encontrado"))
+                .when(estudianteService).eliminarEstudiante(id);
+
+        // Act & Assert
+        mockMvc.perform(delete("/estudiantes/{idEstudiante}", id)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("DELETE /estudiantes/{id} - Debe devolver 409 si esta bloqueado")
+    @WithMockUser(roles = "ADMINISTRADOR")
+    void deleteEstudiante_Bloqueado() throws Exception {
+        // Arrange
+        Long id = 1L;
+        doThrow(new EstudianteBloqueadoException("Estudiante bloqueado"))
+                .when(estudianteService).eliminarEstudiante(id);
+
+        // Act & Assert
+        mockMvc.perform(delete("/estudiantes/{idEstudiante}", id)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isConflict());
     }
 
     @Test
@@ -155,6 +207,56 @@ class EstudianteControllerTest {
     }
 
     @Test
+    @DisplayName("PUT /estudiantes/{id} - Debe devolver 404 si no existe")
+    @WithMockUser(roles = "ADMINISTRADOR")
+    void updateEstudiante_NoExiste() throws Exception {
+        // Arrange
+        Long id = 99L;
+                NombreCompletoDto nombreDto = new NombreCompletoDto();
+                nombreDto.setNombre("Luis");
+                nombreDto.setApellido1("Martinez");
+
+        EstudianteNuevoDto updateDto = new EstudianteNuevoDto();
+        updateDto.setDni("11111111A");
+                updateDto.setIdInstituto(1L);
+                updateDto.setNombreCompleto(nombreDto);
+
+        when(estudianteService.actualizarEstudiante(eq(id), any(EstudianteNuevoDto.class)))
+                .thenThrow(new EstudianteNoEncontradoException("Estudiante no encontrado"));
+
+        // Act & Assert
+        mockMvc.perform(put("/estudiantes/{idEstudiante}", id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateDto)))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("PUT /estudiantes/{id} - Debe devolver 409 si hay conflicto de DNI")
+    @WithMockUser(roles = "ADMINISTRADOR")
+    void updateEstudiante_DniDuplicado() throws Exception {
+        // Arrange
+        Long id = 1L;
+                NombreCompletoDto nombreDto = new NombreCompletoDto();
+                nombreDto.setNombre("Luis");
+                nombreDto.setApellido1("Martinez");
+
+        EstudianteNuevoDto updateDto = new EstudianteNuevoDto();
+        updateDto.setDni("11111111A");
+                updateDto.setIdInstituto(1L);
+                updateDto.setNombreCompleto(nombreDto);
+
+        when(estudianteService.actualizarEstudiante(eq(id), any(EstudianteNuevoDto.class)))
+                .thenThrow(new DniDuplicadoException("DNI duplicado"));
+
+        // Act & Assert
+        mockMvc.perform(put("/estudiantes/{idEstudiante}", id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateDto)))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
     @DisplayName("GET /estudiantes - Debe devolver 200 OK y la lista de estudiantes")
     @WithMockUser(roles = "ADMINISTRADOR")
     void getEstudiantes_Exito() throws Exception {
@@ -192,6 +294,23 @@ class EstudianteControllerTest {
         mockMvc.perform(multipart("/estudiantes/upload")
                         .file(file))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("POST /estudiantes/upload - Debe devolver 400 si el CSV esta vacio")
+    @WithMockUser(roles = "ADMINISTRADOR")
+    void importarEstudiantes_ArchivoVacio() throws Exception {
+        org.springframework.mock.web.MockMultipartFile file =
+                new org.springframework.mock.web.MockMultipartFile(
+                        "ficheroEstudiantes",
+                        "estudiantes.csv",
+                        "text/csv",
+                        new byte[0]
+                );
+
+        mockMvc.perform(multipart("/estudiantes/upload")
+                        .file(file))
+                .andExpect(status().isBadRequest());
     }
 
 
