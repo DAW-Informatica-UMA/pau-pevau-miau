@@ -18,7 +18,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("Tests Unitarios del Controlador de Estudiantes (CSV)")
+@DisplayName("Controlador estudiantes CSV")
 class EstudianteControllerUnitTest {
 
     @Mock
@@ -28,7 +28,7 @@ class EstudianteControllerUnitTest {
     private EstudianteController estudianteController;
 
     @Test
-    @DisplayName("Debe lanzar excepcion si el CSV no tiene cabecera")
+    @DisplayName("CSV sin cabecera")
     void importarEstudiantes_SinCabecera_LanzaExcepcion() throws Exception {
         // Arrange
         MultipartFile file = mock(MultipartFile.class);
@@ -40,7 +40,7 @@ class EstudianteControllerUnitTest {
     }
 
     @Test
-    @DisplayName("Debe lanzar excepcion si falla la lectura del CSV")
+    @DisplayName("CSV lectura falla")
     void importarEstudiantes_ErrorLectura_LanzaExcepcion() throws Exception {
         // Arrange
         MultipartFile file = mock(MultipartFile.class);

@@ -38,7 +38,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("Tests Unitarios del Servicio de Estudiantes")
+@DisplayName("Servicio estudiantes")
 class EstudianteServiceTest {
 
     @Mock
@@ -65,7 +65,7 @@ class EstudianteServiceTest {
     }
 
     @Test
-    @DisplayName("Debe lanzar excepción al intentar consultar un estudiante que no existe")
+    @DisplayName("consultar estudiante no existe")
     void consultarEstudiante_NoExiste_LanzaExcepcion() {
         // Arrange
         Long id = 99L;
@@ -80,7 +80,7 @@ class EstudianteServiceTest {
     }
 
     @Test
-    @DisplayName("Debe devolver un estudiante con instituto y materias")
+    @DisplayName("consultar estudiante con instituto y materias")
     void consultarEstudiante_Existe_DevuelveDtoCompleto() {
         // Arrange
         Long id = 1L;
@@ -118,7 +118,35 @@ class EstudianteServiceTest {
     }
 
     @Test
-    @DisplayName("Debe lanzar excepción si se intenta eliminar un estudiante marcado como no eliminable")
+    @DisplayName("consultar estudiante sin instituto ni materias")
+    void consultarEstudiante_SinInstitutoNiMaterias() {
+        // Arrange
+        Long id = 2L;
+        Estudiante estudiante = new Estudiante();
+        estudiante.setId(id);
+        estudiante.setIdInstituto(null);
+        estudiante.setMateriasMatriculadas(new ArrayList<>());
+
+        when(estudianteRepo.findById(id)).thenReturn(Optional.of(estudiante));
+
+        EstudianteDto dto = new EstudianteDto();
+        dto.setId(id);
+        when(mapper.aDto(eq(estudiante), any(), any())).thenReturn(dto);
+
+        // Act
+        EstudianteDto resultado = estudianteService.consultarEstudiante(id);
+
+        // Assert
+        assertNotNull(resultado);
+        ArgumentCaptor<InstitutoDto> institutoCaptor = ArgumentCaptor.forClass(InstitutoDto.class);
+        ArgumentCaptor<Set> materiasCaptor = ArgumentCaptor.forClass(Set.class);
+        verify(mapper).aDto(eq(estudiante), institutoCaptor.capture(), materiasCaptor.capture());
+        assertNull(institutoCaptor.getValue());
+        assertEquals(0, materiasCaptor.getValue().size());
+    }
+
+    @Test
+    @DisplayName("eliminar estudiante bloqueado")
     void eliminarEstudiante_Bloqueado_LanzaExcepcion() {
         // Arrange
         Long id = 1L;
@@ -139,7 +167,7 @@ class EstudianteServiceTest {
     }
 
     @Test
-    @DisplayName("Debe eliminar un estudiante si no esta bloqueado")
+    @DisplayName("eliminar estudiante OK")
     void eliminarEstudiante_Exito() {
         // Arrange
         Long id = 1L;
@@ -156,7 +184,18 @@ class EstudianteServiceTest {
     }
 
     @Test
-    @DisplayName("Debe crear un nuevo estudiante correctamente")
+    @DisplayName("eliminar estudiante no existe")
+    void eliminarEstudiante_NoExiste_LanzaExcepcion() {
+        // Arrange
+        when(estudianteRepo.findById(99L)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        assertThrows(EstudianteNoEncontradoException.class, () -> estudianteService.eliminarEstudiante(99L));
+        verify(estudianteRepo, never()).delete(any());
+    }
+
+    @Test
+    @DisplayName("crear estudiante OK")
     void crearEstudiante_Exito() {
         // Arrange
         EstudianteNuevoDto nuevoDto = new EstudianteNuevoDto();
@@ -188,7 +227,33 @@ class EstudianteServiceTest {
     }
 
     @Test
-    @DisplayName("Debe lanzar excepción al crear si el DNI está duplicado")
+    @DisplayName("crear estudiante con relaciones")
+    void crearEstudiante_ConRelaciones_Exito() {
+        // Arrange
+        EstudianteNuevoDto nuevoDto = new EstudianteNuevoDto();
+        nuevoDto.setDni("12345678X");
+        nuevoDto.setIdInstituto(10L);
+        nuevoDto.setMateriasMatriculadas(Set.of(20L));
+
+        when(institutoRepo.existsById(10L)).thenReturn(true);
+        when(catalogoClient.getMateria(20L)).thenReturn(new MateriaDto());
+        when(estudianteRepo.existsByDniAndIdConvocatoria(eq("12345678X"), any())).thenReturn(false);
+
+        Estudiante entidad = new Estudiante();
+        when(mapper.aEntidad(any(EstudianteNuevoDto.class), any())).thenReturn(entidad);
+        when(estudianteRepo.save(any(Estudiante.class))).thenReturn(entidad);
+        when(mapper.aDto(any(), any(), any())).thenReturn(new EstudianteDto());
+
+        // Act
+        EstudianteDto resultado = estudianteService.crearEstudiante(nuevoDto);
+
+        // Assert
+        assertNotNull(resultado);
+        verify(estudianteRepo, times(1)).save(any(Estudiante.class));
+    }
+
+    @Test
+    @DisplayName("crear estudiante DNI duplicado")
     void crearEstudiante_DniDuplicado_LanzaExcepcion() {
         // Arrange
         EstudianteNuevoDto nuevoDto = new EstudianteNuevoDto();
@@ -205,7 +270,7 @@ class EstudianteServiceTest {
     }
 
     @Test
-    @DisplayName("Debe lanzar excepcion si el instituto no existe al crear")
+    @DisplayName("crear estudiante instituto no existe")
     void crearEstudiante_InstitutoNoExiste_LanzaExcepcion() {
         // Arrange
         EstudianteNuevoDto nuevoDto = new EstudianteNuevoDto();
@@ -220,7 +285,7 @@ class EstudianteServiceTest {
     }
 
     @Test
-    @DisplayName("Debe lanzar excepcion si alguna materia no existe al crear")
+    @DisplayName("crear estudiante materia no existe")
     void crearEstudiante_MateriaNoExiste_LanzaExcepcion() {
         // Arrange
         EstudianteNuevoDto nuevoDto = new EstudianteNuevoDto();
@@ -237,7 +302,7 @@ class EstudianteServiceTest {
     }
 
     @Test
-    @DisplayName("Debe lanzar excepcion si el instituto no existe al actualizar")
+    @DisplayName("actualizar estudiante instituto no existe")
     void actualizarEstudiante_InstitutoNoExiste_LanzaExcepcion() {
         // Arrange
         EstudianteNuevoDto modificado = new EstudianteNuevoDto();
@@ -253,7 +318,23 @@ class EstudianteServiceTest {
     }
 
     @Test
-    @DisplayName("Debe lanzar excepcion si falta una materia al actualizar")
+    @DisplayName("actualizar estudiante no existe")
+    void actualizarEstudiante_NoExiste_LanzaExcepcion() {
+        // Arrange
+        EstudianteNuevoDto modificado = new EstudianteNuevoDto();
+        modificado.setDni("12345678X");
+        modificado.setIdInstituto(1L);
+
+        when(institutoRepo.existsById(1L)).thenReturn(true);
+        when(estudianteRepo.findById(99L)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        assertThrows(EstudianteNoEncontradoException.class,
+                () -> estudianteService.actualizarEstudiante(99L, modificado));
+    }
+
+    @Test
+    @DisplayName("actualizar estudiante materia no existe")
     void actualizarEstudiante_MateriaNoExiste_LanzaExcepcion() {
         // Arrange
         EstudianteNuevoDto modificado = new EstudianteNuevoDto();
@@ -271,7 +352,7 @@ class EstudianteServiceTest {
     }
 
     @Test
-    @DisplayName("Debe lanzar excepción al intentar cambiar noEliminar de true a false")
+    @DisplayName("actualizar estudiante revocar noEliminar")
     void actualizarEstudiante_RevocarNoEliminar_LanzaExcepcion() {
         // Arrange
         Long id = 1L;
@@ -297,7 +378,72 @@ class EstudianteServiceTest {
     }
 
     @Test
-    @DisplayName("Debe lanzar excepcion si cambia el DNI y ya existe")
+    @DisplayName("actualizar estudiante cambia DNI")
+    void actualizarEstudiante_CambiaDni_Exito() {
+        // Arrange
+        Long id = 1L;
+        Estudiante actual = new Estudiante();
+        actual.setId(id);
+        actual.setDni("12345678X");
+        actual.setCodigoPegatina("PEG1");
+        actual.setNoEliminar(false);
+
+        when(estudianteRepo.findById(id)).thenReturn(Optional.of(actual));
+        when(institutoRepo.existsById(1L)).thenReturn(true);
+        when(estudianteRepo.existsByDniAndIdConvocatoria("22222222B", 1L)).thenReturn(false);
+
+        EstudianteNuevoDto modificado = new EstudianteNuevoDto();
+        modificado.setDni("22222222B");
+        modificado.setIdInstituto(1L);
+
+        Estudiante entidad = new Estudiante();
+        when(mapper.aEntidad(eq(modificado), eq(1L), eq("PEG1"))).thenReturn(entidad);
+        when(estudianteRepo.save(any(Estudiante.class))).thenReturn(entidad);
+        when(mapper.aDto(any(), any(), any())).thenReturn(new EstudianteDto());
+
+        // Act
+        EstudianteDto resultado = estudianteService.actualizarEstudiante(id, modificado);
+
+        // Assert
+        assertNotNull(resultado);
+        verify(estudianteRepo, times(1)).existsByDniAndIdConvocatoria("22222222B", 1L);
+        verify(estudianteRepo, times(1)).save(entidad);
+    }
+
+    @Test
+    @DisplayName("actualizar estudiante mismo DNI")
+    void actualizarEstudiante_MismoDni_Exito() {
+        // Arrange
+        Long id = 1L;
+        Estudiante actual = new Estudiante();
+        actual.setId(id);
+        actual.setDni("12345678X");
+        actual.setCodigoPegatina("PEG2");
+        actual.setNoEliminar(false);
+
+        when(estudianteRepo.findById(id)).thenReturn(Optional.of(actual));
+        when(institutoRepo.existsById(1L)).thenReturn(true);
+
+        EstudianteNuevoDto modificado = new EstudianteNuevoDto();
+        modificado.setDni("12345678X");
+        modificado.setIdInstituto(1L);
+
+        Estudiante entidad = new Estudiante();
+        when(mapper.aEntidad(eq(modificado), eq(1L), eq("PEG2"))).thenReturn(entidad);
+        when(estudianteRepo.save(any(Estudiante.class))).thenReturn(entidad);
+        when(mapper.aDto(any(), any(), any())).thenReturn(new EstudianteDto());
+
+        // Act
+        EstudianteDto resultado = estudianteService.actualizarEstudiante(id, modificado);
+
+        // Assert
+        assertNotNull(resultado);
+        verify(estudianteRepo, never()).existsByDniAndIdConvocatoria(anyString(), any());
+        verify(estudianteRepo, times(1)).save(entidad);
+    }
+
+    @Test
+    @DisplayName("actualizar estudiante DNI duplicado")
     void actualizarEstudiante_DniDuplicado_LanzaExcepcion() {
         // Arrange
         Long id = 1L;
@@ -317,7 +463,7 @@ class EstudianteServiceTest {
     }
 
     @Test
-    @DisplayName("Debe mantener noEliminar en true si ya estaba bloqueado")
+    @DisplayName("actualizar estudiante mantiene noEliminar")
     void actualizarEstudiante_NoEliminarSeMantieneTrue() {
         // Arrange
         Long id = 1L;
@@ -346,7 +492,7 @@ class EstudianteServiceTest {
     }
 
     @Test
-    @DisplayName("Debe consultar estudiantes con convocatoria vigente por defecto")
+    @DisplayName("listar estudiantes usa convocatoria vigente")
     void consultarEstudiantes_SinConvocatoria_UsaVigente() {
         // Arrange
         Estudiante estudiante = new Estudiante();
@@ -365,7 +511,7 @@ class EstudianteServiceTest {
     }
 
     @Test
-    @DisplayName("Debe consultar estudiantes filtrando por sede y convocatoria")
+    @DisplayName("listar estudiantes por sede y convocatoria")
     void consultarEstudiantes_ConSede_YConvocatoria() {
         // Arrange
         Estudiante estudiante = new Estudiante();
@@ -384,7 +530,26 @@ class EstudianteServiceTest {
     }
 
     @Test
-    @DisplayName("Debe importar estudiantes cuando el CSV es correcto")
+    @DisplayName("listar estudiantes por sede con vigente")
+    void consultarEstudiantes_ConSede_SinConvocatoria() {
+        // Arrange
+        Estudiante estudiante = new Estudiante();
+        estudiante.setId(3L);
+
+        when(estudianteRepo.findByIdSedeAndIdConvocatoria(5L, 1L)).thenReturn(List.of(estudiante));
+        when(mapper.aDto(eq(estudiante), any(), any())).thenReturn(new EstudianteDto());
+
+        // Act
+        List<EstudianteDto> resultado = estudianteService.consultarEstudiantes(5L, null);
+
+        // Assert
+        assertEquals(1, resultado.size());
+        verify(estudianteRepo, times(1)).findByIdSedeAndIdConvocatoria(5L, 1L);
+        verify(estudianteRepo, never()).findByIdConvocatoria(any());
+    }
+
+    @Test
+    @DisplayName("importar CSV OK")
     void importarEstudiantes_Exito() {
         // Arrange
         EstudianteNuevoDto dto = new EstudianteNuevoDto();
@@ -433,7 +598,7 @@ class EstudianteServiceTest {
     }
 
     @Test
-    @DisplayName("Debe registrar el error si el parseo del CSV falla")
+    @DisplayName("importar CSV con error de parseo")
     void importarEstudiantes_ErrorParseo() {
         // Arrange
         EstudianteNuevoDto dto = new EstudianteNuevoDto();
@@ -452,7 +617,7 @@ class EstudianteServiceTest {
     }
 
     @Test
-    @DisplayName("Debe registrar el error si el instituto no existe en la importacion")
+    @DisplayName("importar CSV instituto no existe")
     void importarEstudiantes_InstitutoNoEncontrado() {
         // Arrange
         EstudianteNuevoDto dto = new EstudianteNuevoDto();
@@ -472,7 +637,7 @@ class EstudianteServiceTest {
     }
 
     @Test
-    @DisplayName("Debe registrar el error si falta una materia en la importacion")
+    @DisplayName("importar CSV materia no existe")
     void importarEstudiantes_MateriaNoEncontrada() {
         // Arrange
         EstudianteNuevoDto dto = new EstudianteNuevoDto();

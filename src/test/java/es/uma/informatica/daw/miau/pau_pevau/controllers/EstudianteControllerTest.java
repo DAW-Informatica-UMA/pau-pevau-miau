@@ -5,6 +5,8 @@ import es.uma.informatica.daw.miau.pau_pevau.exceptions.DniDuplicadoException;
 import es.uma.informatica.daw.miau.pau_pevau.exceptions.EstudianteBloqueadoException;
 import es.uma.informatica.daw.miau.pau_pevau.exceptions.EstudianteNoEncontradoException;
 import es.uma.informatica.daw.miau.pau_pevau.exceptions.GlobalExceptionHandler;
+import es.uma.informatica.daw.miau.pau_pevau.exceptions.InstitutoNoEncontradoException;
+import es.uma.informatica.daw.miau.pau_pevau.exceptions.MateriaNoEncontradaException;
 import es.uma.informatica.daw.miau.pau_pevau.models.EstudianteDto;
 import es.uma.informatica.daw.miau.pau_pevau.models.NombreCompletoDto;
 import es.uma.informatica.daw.miau.pau_pevau.services.EstudianteService;
@@ -154,6 +156,44 @@ class EstudianteControllerTest {
     }
 
     @Test
+    @DisplayName("POST /estudiantes - Debe devolver 400 si faltan campos obligatorios")
+    @WithMockUser(roles = "ADMINISTRADOR")
+    void createEstudiante_DatosInvalidos() throws Exception {
+        // Arrange
+        EstudianteNuevoDto nuevoDto = new EstudianteNuevoDto();
+
+        // Act & Assert
+        mockMvc.perform(post("/estudiantes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(nuevoDto)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("POST /estudiantes - Debe devolver 404 si el instituto no existe")
+    @WithMockUser(roles = "ADMINISTRADOR")
+    void createEstudiante_InstitutoNoExiste() throws Exception {
+        // Arrange
+        NombreCompletoDto nombreDto = new NombreCompletoDto();
+        nombreDto.setNombre("Carlos");
+        nombreDto.setApellido1("Ruiz");
+
+        EstudianteNuevoDto nuevoDto = new EstudianteNuevoDto();
+        nuevoDto.setDni("87654321Y");
+        nuevoDto.setIdInstituto(99L);
+        nuevoDto.setNombreCompleto(nombreDto);
+
+        when(estudianteService.crearEstudiante(any(EstudianteNuevoDto.class)))
+                .thenThrow(new InstitutoNoEncontradoException("Instituto no encontrado"));
+
+        // Act & Assert
+        mockMvc.perform(post("/estudiantes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(nuevoDto)))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     @DisplayName("POST /estudiantes - Debe devolver 409 Conflict si el DNI ya existe")
     @WithMockUser(roles = "ADMINISTRADOR")
     void createEstudiante_DniDuplicado_LanzaConflicto() throws Exception {
@@ -257,6 +297,56 @@ class EstudianteControllerTest {
     }
 
     @Test
+    @DisplayName("PUT /estudiantes/{id} - Debe devolver 409 si el estudiante está si ya existe")
+    @WithMockUser(roles = "ADMINISTRADOR")
+    void updateEstudiante_Existente() throws Exception {
+        // Arrange
+        Long id = 1L;
+        NombreCompletoDto nombreDto = new NombreCompletoDto();
+        nombreDto.setNombre("Luis");
+        nombreDto.setApellido1("Martinez");
+
+        EstudianteNuevoDto updateDto = new EstudianteNuevoDto();
+        updateDto.setDni("11111111A");
+        updateDto.setIdInstituto(1L);
+        updateDto.setNombreCompleto(nombreDto);
+
+        when(estudianteService.actualizarEstudiante(eq(id), any(EstudianteNuevoDto.class)))
+                .thenThrow(new EstudianteBloqueadoException("Estudiante bloqueado"));
+
+        // Act & Assert
+        mockMvc.perform(put("/estudiantes/{idEstudiante}", id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateDto)))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    @DisplayName("PUT /estudiantes/{id} - Debe devolver 404 si alguna materia no existe")
+    @WithMockUser(roles = "ADMINISTRADOR")
+    void updateEstudiante_MateriaNoExiste() throws Exception {
+        // Arrange
+        Long id = 1L;
+        NombreCompletoDto nombreDto = new NombreCompletoDto();
+        nombreDto.setNombre("Luis");
+        nombreDto.setApellido1("Martinez");
+
+        EstudianteNuevoDto updateDto = new EstudianteNuevoDto();
+        updateDto.setDni("11111111A");
+        updateDto.setIdInstituto(1L);
+        updateDto.setNombreCompleto(nombreDto);
+
+        when(estudianteService.actualizarEstudiante(eq(id), any(EstudianteNuevoDto.class)))
+                .thenThrow(new MateriaNoEncontradaException("Materia no encontrada"));
+
+        // Act & Assert
+        mockMvc.perform(put("/estudiantes/{idEstudiante}", id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateDto)))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     @DisplayName("GET /estudiantes - Debe devolver 200 OK y la lista de estudiantes")
     @WithMockUser(roles = "ADMINISTRADOR")
     void getEstudiantes_Exito() throws Exception {
@@ -271,6 +361,26 @@ class EstudianteControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].dni").value("12345678X"));
     }
+
+        @Test
+        @DisplayName("GET /estudiantes - Debe usar los parámetros de consulta")
+        @WithMockUser(roles = "ADMINISTRADOR")
+        void getEstudiantes_ConParametros() throws Exception {
+                // Arrange
+                EstudianteDto dto = new EstudianteDto();
+                dto.setId(2L);
+                dto.setDni("87654321Y");
+
+                when(estudianteService.consultarEstudiantes(eq(5L), eq(7L))).thenReturn(java.util.List.of(dto));
+
+                // Act & Assert
+                mockMvc.perform(get("/estudiantes")
+                                                .param("idSede", "5")
+                                                .param("idConvocatoria", "7")
+                                                .contentType(MediaType.APPLICATION_JSON))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$[0].dni").value("87654321Y"));
+        }
 
     @Test
     @DisplayName("POST /estudiantes/upload - Debe devolver 200 OK al subir el CSV")
