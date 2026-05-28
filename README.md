@@ -35,7 +35,7 @@ Este repositorio contiene un microservicio REST desarrollado para la asignatura 
 | :--- |
 | • Francisco Bravo Bravo |
 | • Juan Víctor Palomo Martínez |
-| • ~Patricia Jia Hoyo Marqués~ |
+| • Patricia Jia Hoyo Marqués |
 | • Javiér Coronado Torres-Pardo |
 | • Mihai Cristian Mita |
 
